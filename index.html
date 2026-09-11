@@ -476,7 +476,8 @@
   /* ---------- New feature styles ---------- */
   .view-toggle{ display:flex; gap:6px; margin-right:6px; }
   .view-toggle button{
-    padding:6px 10px; font-size:12px; font-weight:600;
+    display:flex; align-items:center; justify-content:center;
+    width:34px; height:34px; padding:0;
     border-radius:8px; border:1px solid var(--border);
     background:var(--surface-alt); color:var(--text-dim); cursor:pointer;
   }
@@ -538,6 +539,40 @@
   .share-link-box{ flex:1; min-width:180px; display:flex; gap:8px; }
   .share-link-box input{ flex:1; }
   #shareQr{ width:120px; height:120px; border-radius:10px; border:1px solid var(--border); background:var(--surface-alt); }
+
+  .day{ cursor:pointer; }
+
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(10,12,16,0.55);
+    align-items:center; justify-content:center; z-index:1000; padding:20px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-l);
+    padding:24px; width:100%; max-width:360px; position:relative;
+    animation: modalIn .18s ease;
+  }
+  @keyframes modalIn{ from{ transform:scale(.95); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  .modal-close{
+    position:absolute; top:14px; right:14px; background:transparent; border:none;
+    color:var(--text-dim); font-size:16px; cursor:pointer; padding:4px; line-height:1;
+  }
+  .modal-date{ font-family:'Fraunces',serif; font-weight:600; font-size:20px; margin-bottom:5px; padding-right:24px; text-transform:capitalize; }
+  .modal-status{ font-size:13.5px; font-weight:600; margin-bottom:14px; }
+  .modal-status.praca{ color:var(--praca); }
+  .modal-status.dom{ color:var(--dom); }
+  .modal-holiday{
+    display:flex; align-items:flex-start; gap:9px; background:var(--unsure-soft); border:1px solid var(--unsure-line);
+    border-radius:10px; padding:10px 12px; margin-bottom:16px; font-size:13.5px; color:var(--text);
+  }
+  .modal-holiday b{ color:var(--unsure); font-size:14px; line-height:1.3; }
+  .modal-note-label{ display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:7px; }
+  #dayModalNote{
+    width:100%; background:var(--surface-alt); border:1px solid var(--border); color:var(--text);
+    padding:10px 12px; border-radius:var(--radius-s); font-family:'Inter',sans-serif; font-size:13.5px;
+    resize:vertical; margin-bottom:16px; box-sizing:border-box;
+  }
+  .modal-actions{ display:flex; gap:10px; flex-wrap:wrap; }
 </style>
 </head>
 <body>
@@ -668,8 +703,12 @@
         <div class="cal-title" id="calTitle">—</div>
         <div class="cal-nav">
           <div class="view-toggle" id="viewToggle">
-            <button type="button" data-v="month" class="active">Miesiąc</button>
-            <button type="button" data-v="year">Rok</button>
+            <button type="button" data-v="month" class="active" title="Widok miesiąca" aria-label="Widok miesiąca">
+              <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><rect x="2.5" y="3.5" width="13" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 7h13" stroke="currentColor" stroke-width="1.4"/><path d="M6.3 3.5v-1M11.7 3.5v-1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><rect x="7" y="9.3" width="4" height="3.7" rx="0.8" fill="currentColor"/></svg>
+            </button>
+            <button type="button" data-v="year" title="Widok roku" aria-label="Widok roku">
+              <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><rect x="2.5" y="3.5" width="13" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 7h13" stroke="currentColor" stroke-width="1.4"/><path d="M6.3 3.5v-1M11.7 3.5v-1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><rect x="4.5" y="9" width="2.4" height="2" rx="0.4" fill="currentColor"/><rect x="7.8" y="9" width="2.4" height="2" rx="0.4" fill="currentColor"/><rect x="11.1" y="9" width="2.4" height="2" rx="0.4" fill="currentColor"/><rect x="4.5" y="11.8" width="2.4" height="2" rx="0.4" fill="currentColor"/><rect x="7.8" y="11.8" width="2.4" height="2" rx="0.4" fill="currentColor"/><rect x="11.1" y="11.8" width="2.4" height="2" rx="0.4" fill="currentColor"/></svg>
+            </button>
           </div>
           <button id="prevBtn" aria-label="Poprzedni miesiąc">‹</button>
           <button id="todayBtn" aria-label="Dziś">•</button>
@@ -758,17 +797,67 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="dayModalOverlay">
+    <div class="modal-card" id="dayModalCard">
+      <button class="modal-close" id="dayModalClose" type="button" aria-label="Zamknij">✕</button>
+      <div class="modal-date" id="dayModalDate">—</div>
+      <div class="modal-status" id="dayModalStatus">—</div>
+      <div class="modal-holiday" id="dayModalHoliday" style="display:none;">
+        <span>★</span>
+        <div><b id="dayModalHolidayName"></b></div>
+      </div>
+      <label class="modal-note-label" for="dayModalNote">Notatka</label>
+      <textarea id="dayModalNote" rows="3" placeholder="np. szkolenie, zmiana terminu…"></textarea>
+      <div class="modal-actions">
+        <button class="primary" id="dayModalSave" type="button">Zapisz</button>
+        <button class="mini-btn" id="dayModalDelete" type="button">Usuń notatkę</button>
+      </div>
+    </div>
+  </div>
+
   <footer>ROTA — grafik przechowywany lokalnie, działa offline.</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 (function(){
+  // Outside Claude's own preview, window.storage doesn't exist — but this app is
+  // meant to run as a real hosted page/installed PWA, so persistence needs to work
+  // there too. If the real API isn't present, back it with localStorage instead,
+  // matching the same async get/set shape (get rejects on a missing key).
+  if (!window.storage){
+    try{
+      localStorage.setItem('__rota_probe__','1');
+      localStorage.removeItem('__rota_probe__');
+      window.storage = {
+        get(key){
+          return new Promise((resolve, reject)=>{
+            const v = localStorage.getItem(key);
+            if (v === null) reject(new Error('not found'));
+            else resolve({ key, value: v });
+          });
+        },
+        set(key, value){
+          return new Promise((resolve)=>{
+            localStorage.setItem(key, value);
+            resolve({ key, value });
+          });
+        }
+      };
+    }catch(e){ /* localStorage unavailable (e.g. private mode) — app still works, just without persistence */ }
+  }
+
   const MS_DAY = 86400000;
   const monthsPL = ["styczeń","luty","marzec","kwiecień","maj","czerwiec","lipiec","sierpień","wrzesień","październik","listopad","grudzień"];
 
   function toDateOnly(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
-  function fmt(d){ return toDateOnly(d).toISOString().slice(0,10); }
+  function fmt(d){
+    const dt = toDateOnly(d);
+    const yyyy = dt.getFullYear();
+    const mm = String(dt.getMonth()+1).padStart(2,'0');
+    const dd = String(dt.getDate()).padStart(2,'0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
   function fmtDisplay(d){
     const dd = String(d.getDate()).padStart(2,'0');
     const mm = String(d.getMonth()+1).padStart(2,'0');
@@ -880,7 +969,16 @@
     colorReset: document.getElementById('colorReset'),
     shareLink: document.getElementById('shareLink'),
     shareCopyBtn: document.getElementById('shareCopyBtn'),
-    shareQr: document.getElementById('shareQr')
+    shareQr: document.getElementById('shareQr'),
+    dayModalOverlay: document.getElementById('dayModalOverlay'),
+    dayModalClose: document.getElementById('dayModalClose'),
+    dayModalDate: document.getElementById('dayModalDate'),
+    dayModalStatus: document.getElementById('dayModalStatus'),
+    dayModalHoliday: document.getElementById('dayModalHoliday'),
+    dayModalHolidayName: document.getElementById('dayModalHolidayName'),
+    dayModalNote: document.getElementById('dayModalNote'),
+    dayModalSave: document.getElementById('dayModalSave'),
+    dayModalDelete: document.getElementById('dayModalDelete')
   };
 
   const today = toDateOnly(new Date());
@@ -954,9 +1052,19 @@
   function showInstallBanner(){
     if (installDismissed || isStandalone()) return;
     els.installBanner.style.display = 'flex';
+    markInstallBannerSeen();
   }
   function hideInstallBanner(){
     els.installBanner.style.display = 'none';
+  }
+  async function markInstallBannerSeen(){
+    if (installDismissed) return;
+    installDismissed = true;
+    try{
+      if (window.storage && window.storage.set){
+        await window.storage.set('rota-install-dismissed', '1');
+      }
+    }catch(e){ /* seen-state stays in-memory for this session */ }
   }
 
   window.addEventListener('beforeinstallprompt', (e)=>{
@@ -1322,15 +1430,64 @@
     if (currentView === 'year'){ renderYear(); renderStats(); } else { renderCalendar(); }
   });
 
-  // ---- day notes ----
-  els.daysGrid.addEventListener('click', async (e)=>{
+  // ---- day detail modal (holiday info + note editor) ----
+  let dayModalKey = null;
+
+  function openDayModal(dateKey){
+    dayModalKey = dateKey;
+    const d = toDateOnly(new Date(dateKey + 'T00:00:00'));
+    const info = periodInfo(d);
+    const weekdayNames = ['niedziela','poniedziałek','wtorek','środa','czwartek','piątek','sobota'];
+
+    els.dayModalDate.textContent = `${weekdayNames[d.getDay()]}, ${fmtDisplay(d)}`;
+    els.dayModalStatus.textContent = info.s === 'praca' ? 'W pracy' : 'W domu';
+    els.dayModalStatus.className = 'modal-status ' + info.s;
+
+    const hName = holidayName(d);
+    if (hName){
+      els.dayModalHoliday.style.display = 'flex';
+      els.dayModalHolidayName.textContent = hName;
+    } else {
+      els.dayModalHoliday.style.display = 'none';
+    }
+
+    els.dayModalNote.value = state.notes[dateKey] || '';
+    els.dayModalOverlay.classList.add('open');
+    els.dayModalNote.focus();
+  }
+
+  function closeDayModal(){
+    els.dayModalOverlay.classList.remove('open');
+    dayModalKey = null;
+  }
+
+  els.daysGrid.addEventListener('click', (e)=>{
     const cell = e.target.closest('.day');
     if (!cell || !cell.dataset.date) return;
-    const key = cell.dataset.date;
-    const existing = state.notes[key] || '';
-    const text = prompt(`Notatka na ${key.split('-').reverse().join('.')}:`, existing);
-    if (text === null) return;
-    if (text.trim() === ''){ delete state.notes[key]; } else { state.notes[key] = text.trim(); }
+    openDayModal(cell.dataset.date);
+  });
+
+  els.dayModalClose.addEventListener('click', closeDayModal);
+  els.dayModalOverlay.addEventListener('click', (e)=>{
+    if (e.target === els.dayModalOverlay) closeDayModal();
+  });
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape' && els.dayModalOverlay.classList.contains('open')) closeDayModal();
+  });
+
+  els.dayModalSave.addEventListener('click', async ()=>{
+    if (!dayModalKey) return;
+    const text = els.dayModalNote.value.trim();
+    if (text === ''){ delete state.notes[dayModalKey]; } else { state.notes[dayModalKey] = text; }
+    closeDayModal();
+    renderCalendar();
+    await persistProfiles();
+  });
+
+  els.dayModalDelete.addEventListener('click', async ()=>{
+    if (!dayModalKey) return;
+    delete state.notes[dayModalKey];
+    closeDayModal();
     renderCalendar();
     await persistProfiles();
   });
