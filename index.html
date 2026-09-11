@@ -472,6 +472,72 @@
     font-size:11.5px;
     margin-top:34px;
   }
+
+  /* ---------- New feature styles ---------- */
+  .view-toggle{ display:flex; gap:6px; margin-right:6px; }
+  .view-toggle button{
+    padding:6px 10px; font-size:12px; font-weight:600;
+    border-radius:8px; border:1px solid var(--border);
+    background:var(--surface-alt); color:var(--text-dim); cursor:pointer;
+  }
+  .view-toggle button.active{ background:var(--dom-soft); color:var(--dom); border-color:var(--dom-line); }
+
+  .jump-row{ display:flex; gap:8px; align-items:center; margin:12px 0 4px; flex-wrap:wrap; }
+  .jump-row input[type=date]{ width:auto; flex:1; min-width:130px; }
+  .mini-btn{
+    padding:9px 14px; border-radius:8px; border:1px solid var(--border);
+    background:var(--surface-alt); color:var(--text); font-size:12.5px; font-weight:600; cursor:pointer;
+  }
+  .mini-btn:hover{ border-color:var(--dom-line); }
+
+  .year-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:6px; }
+  @media (max-width:560px){ .year-grid{ grid-template-columns:repeat(2,1fr); } }
+  .year-month{ background:var(--surface-alt); border:1px solid var(--border); border-radius:10px; padding:8px; }
+  .year-month .ym-title{ font-size:11.5px; font-weight:700; text-align:center; margin-bottom:5px; text-transform:capitalize; }
+  .year-month .ym-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:1.5px; }
+  .year-month .ym-day{ aspect-ratio:1/1; border-radius:2px; background:var(--surface); }
+  .year-month .ym-day.praca{ background:var(--praca); opacity:.85; }
+  .year-month .ym-day.dom{ background:var(--dom); opacity:.85; }
+  .year-month .ym-day.muted{ background:transparent; }
+
+  .stat-row{ display:flex; gap:16px; flex-wrap:wrap; }
+  .stat-box{ flex:1; min-width:110px; background:var(--surface-alt); border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+  .stat-box b{ display:block; font-family:'IBM Plex Mono',monospace; font-size:22px; }
+  .stat-box span{ font-size:11.5px; color:var(--text-dim); }
+  .stat-box.praca b{ color:var(--praca); }
+  .stat-box.dom b{ color:var(--dom); }
+
+  .day.holiday::before{
+    content:"★"; position:absolute; top:2px; right:3px; font-size:7px; color:var(--unsure); line-height:1;
+  }
+  .day.has-note::after{
+    content:""; position:absolute; top:3px; left:3px; width:4px; height:4px; border-radius:50%; background:var(--text);
+  }
+
+  .checkbox-row{ display:flex; align-items:center; gap:9px; margin-top:14px; }
+  .checkbox-row input{ width:16px; height:16px; accent-color:var(--dom); }
+  .checkbox-row label{ font-size:13px; color:var(--text); cursor:pointer; }
+
+  .color-row{ display:flex; gap:18px; margin-top:14px; flex-wrap:wrap; }
+  .color-field{ display:flex; align-items:center; gap:8px; }
+  .color-field input[type=color]{ width:32px; height:32px; border:1px solid var(--border); border-radius:8px; padding:0; background:none; cursor:pointer; }
+  .color-field span{ font-size:12.5px; color:var(--text-dim); }
+
+  .profile-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+  .profile-row select{
+    flex:1; min-width:120px; background:var(--surface-alt); border:1px solid var(--border); color:var(--text);
+    padding:10px 12px; border-radius:var(--radius-s); font-family:'Inter',sans-serif; font-size:13.5px;
+  }
+
+  .planner-result{ margin-top:14px; padding:12px 14px; border-radius:10px; font-size:13.5px; display:none; }
+  .planner-result.ok{ background:var(--dom-soft); border:1px solid var(--dom-line); display:block; }
+  .planner-result.bad{ background:var(--praca-soft); border:1px solid var(--praca-line); display:block; }
+  .planner-result.mixed{ background:var(--unsure-soft); border:1px solid var(--unsure-line); display:block; }
+
+  .share-row{ display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; }
+  .share-link-box{ flex:1; min-width:180px; display:flex; gap:8px; }
+  .share-link-box input{ flex:1; }
+  #shareQr{ width:120px; height:120px; border-radius:10px; border:1px solid var(--border); background:var(--surface-alt); }
 </style>
 </head>
 <body>
@@ -530,6 +596,13 @@
       <svg class="chev" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#8791A3" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </summary>
     <div class="setup-body">
+      <div class="profile-row">
+        <select id="profileSelect"></select>
+        <button class="mini-btn" id="profileAdd" type="button">+ Nowy</button>
+        <button class="mini-btn" id="profileRename" type="button">Zmień nazwę</button>
+        <button class="mini-btn" id="profileDelete" type="button">Usuń</button>
+      </div>
+
       <div class="field">
         <label>Gdzie jesteś teraz</label>
         <div class="seg" id="stateSeg">
@@ -556,10 +629,30 @@
 
       <div class="field-row">
         <div class="field">
-          <label>Tolerancja terminu zmiany (± dni)</label>
-          <input type="number" id="tolerance" min="0" max="10" value="0">
-          <div class="field-hint">Zaznacza na kalendarzu innym kolorem dni wokół daty zmiany, które też mogą się nią okazać (np. przesunięty lot lub transport). 0 = brak tolerancji.</div>
+          <label>Tolerancja wyjazdu do pracy (± dni)</label>
+          <input type="number" id="toleranceOut" min="0" max="10" value="0">
         </div>
+        <div class="field">
+          <label>Tolerancja powrotu do domu (± dni)</label>
+          <input type="number" id="toleranceIn" min="0" max="10" value="0">
+        </div>
+      </div>
+      <div class="field-hint">Zaznaczają na kalendarzu dni wokół każdej daty zmiany, które też mogą się nią okazać (np. przesunięty lot). 0 = brak tolerancji.</div>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="holidayToggle">
+        <label for="holidayToggle">Pokazuj polskie święta ustawowe na kalendarzu (★)</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="notifyToggle">
+        <label for="notifyToggle">Przypomnij powiadomieniem dzień przed zmianą (gdy aplikacja jest otwarta)</label>
+      </div>
+
+      <div class="color-row">
+        <div class="color-field"><input type="color" id="colorPraca" value="#B9720E"><span>Kolor „praca”</span></div>
+        <div class="color-field"><input type="color" id="colorDom" value="#1C8F73"><span>Kolor „dom”</span></div>
+        <div class="color-field"><input type="color" id="colorUnsure" value="#6E4FC4"><span>Kolor tolerancji</span></div>
+        <button class="mini-btn" id="colorReset" type="button">Domyślne</button>
       </div>
 
       <div class="setup-actions">
@@ -574,20 +667,37 @@
       <div class="cal-head">
         <div class="cal-title" id="calTitle">—</div>
         <div class="cal-nav">
+          <div class="view-toggle" id="viewToggle">
+            <button type="button" data-v="month" class="active">Miesiąc</button>
+            <button type="button" data-v="year">Rok</button>
+          </div>
           <button id="prevBtn" aria-label="Poprzedni miesiąc">‹</button>
           <button id="todayBtn" aria-label="Dziś">•</button>
           <button id="nextBtn" aria-label="Następny miesiąc">›</button>
         </div>
       </div>
-      <div class="weekdays">
-        <div>Pn</div><div>Wt</div><div>Śr</div><div>Cz</div><div>Pt</div><div>So</div><div>Nd</div>
+
+      <div class="jump-row">
+        <input type="date" id="jumpDate">
+        <button class="mini-btn" id="jumpBtn" type="button">Przejdź do daty</button>
+        <button class="mini-btn" id="pngBtn" type="button">Pobierz PNG</button>
       </div>
-      <div class="days" id="daysGrid"></div>
+
+      <div id="monthView">
+        <div class="weekdays">
+          <div>Pn</div><div>Wt</div><div>Śr</div><div>Cz</div><div>Pt</div><div>So</div><div>Nd</div>
+        </div>
+        <div class="days" id="daysGrid"></div>
+        <div class="field-hint" style="margin-top:10px;">Stuknij dzień, żeby dodać do niego notatkę.</div>
+      </div>
+      <div id="yearView" class="year-grid" style="display:none;"></div>
+
       <div class="legend">
         <div><i style="background:var(--praca)"></i>W pracy</div>
         <div><i style="background:var(--dom)"></i>W domu</div>
         <div><i style="background:var(--surface-alt);box-shadow:inset 0 0 0 2px var(--text)"></i>Dziś</div>
         <div id="legendUncertain" style="display:none"><i style="background:var(--unsure)"></i><span id="legendUncertainText">Możliwe przesunięcie</span></div>
+        <div id="legendHoliday" style="display:none"><span style="color:var(--unsure);">★</span>&nbsp;Święto</div>
       </div>
     </div>
 
@@ -597,9 +707,28 @@
     </div>
   </div>
 
+  <div class="card" style="margin-top:22px;">
+    <div class="side-title">Statystyki <span id="statsYear"></span></div>
+    <div class="stat-row">
+      <div class="stat-box praca"><b id="statPraca">–</b><span>dni w pracy</span></div>
+      <div class="stat-box dom"><b id="statDom">–</b><span>dni w domu</span></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:22px;">
+    <div class="side-title">Planer wyjazdu</div>
+    <div class="field-hint" style="margin-top:-6px;margin-bottom:14px;">Sprawdź, czy wybrany zakres dat mieści się w całości w Twoim wolnym (lub roboczym) okresie.</div>
+    <div class="field-row">
+      <div class="field"><label>Od</label><input type="date" id="plannerStart"></div>
+      <div class="field"><label>Do</label><input type="date" id="plannerEnd"></div>
+    </div>
+    <div class="setup-actions"><button class="secondary" id="plannerBtn" type="button">Sprawdź</button></div>
+    <div class="planner-result" id="plannerResult"></div>
+  </div>
+
   <div class="card" id="pdfCard" style="margin-top:22px;">
-    <div class="side-title">Eksport do PDF</div>
-    <div class="field-hint" style="margin-top:-6px;margin-bottom:16px;">Wybierz okres, dla którego wygenerować plik PDF z zaznaczonymi dniami pracy, domu i tolerancji — do wydruku lub przesłania dalej. Funkcja jednorazowo pobiera niewielką bibliotekę, więc przy pierwszym użyciu wymaga internetu.</div>
+    <div class="side-title">Eksport</div>
+    <div class="field-hint" style="margin-top:-6px;margin-bottom:16px;">Wybierz okres, dla którego wygenerować plik PDF lub .ics z zaznaczonymi dniami pracy, domu i tolerancji. Eksport PDF jednorazowo pobiera niewielką bibliotekę, więc przy pierwszym użyciu wymaga internetu.</div>
     <div class="field-row">
       <div class="field">
         <label>Od</label>
@@ -612,7 +741,20 @@
     </div>
     <div class="setup-actions">
       <button class="secondary" id="pdfBtn" type="button">Pobierz PDF</button>
+      <button class="secondary" id="icsBtn" type="button">Pobierz .ics</button>
       <span class="save-note" id="pdfNote"></span>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:22px;">
+    <div class="side-title">Udostępnij grafik</div>
+    <div class="field-hint" style="margin-top:-6px;margin-bottom:14px;">Wygeneruj link (i kod QR) z Twoim aktualnym grafikiem — osoba, która go otworzy, będzie mogła zaimportować go jako nowy profil. Kod QR wymaga internetu.</div>
+    <div class="share-row">
+      <div class="share-link-box">
+        <input type="text" id="shareLink" readonly>
+        <button class="mini-btn" id="shareCopyBtn" type="button">Kopiuj</button>
+      </div>
+      <img id="shareQr" alt="Kod QR" style="display:none;">
     </div>
   </div>
 
@@ -634,18 +776,43 @@
   }
   function addDays(d, n){ const r = new Date(d); r.setDate(r.getDate()+n); return r; }
   function mod(n, m){ return ((n % m) + m) % m; }
-  function changeRangeLabel(boundaryDate){
-    const t = state.tolerance || 0;
+  function toleranceFor(enteringState){
+    return enteringState === 'praca' ? (state.toleranceOut||0) : (state.toleranceIn||0);
+  }
+  function changeRangeLabel(boundaryDate, enteringState){
+    const t = toleranceFor(enteringState);
     if (!t) return fmtDisplay(boundaryDate);
     return `${fmtDisplay(addDays(boundaryDate, -t))} – ${fmtDisplay(addDays(boundaryDate, t - 1))}`;
   }
+  function isUncertainDate(d, info){
+    const daysFromStart = Math.round((toDateOnly(d) - toDateOnly(info.start)) / MS_DAY);
+    const daysToEnd = Math.round((toDateOnly(info.end) - toDateOnly(d)) / MS_DAY);
+    const oppositeState = info.s === 'praca' ? 'dom' : 'praca';
+    return daysFromStart < toleranceFor(info.s) || daysToEnd < toleranceFor(oppositeState);
+  }
 
-  let state = {
-    currentState: 'praca',   // state the user is in right now (before changeDate)
-    changeDate: fmt(addDays(new Date(), 7)),
-    workDays: 28,
-    homeDays: 28,
-    tolerance: 0             // ± days of uncertainty around each transition
+  function defaultScheduleData(){
+    return {
+      currentState: 'praca',
+      changeDate: fmt(addDays(new Date(), 7)),
+      workDays: 28,
+      homeDays: 28,
+      toleranceOut: 0,
+      toleranceIn: 0,
+      notes: {}
+    };
+  }
+
+  let profiles = [{ id:'default', name:'Grafik 1', data: defaultScheduleData() }];
+  let activeProfileId = 'default';
+  let state = profiles[0].data; // alias to the active profile's schedule data
+
+  let uiPrefs = {
+    showHolidays: false,
+    notifyEnabled: false,
+    colorPraca: null,
+    colorDom: null,
+    colorUnsure: null
   };
 
   const els = {
@@ -653,7 +820,8 @@
     changeDate: document.getElementById('changeDate'),
     workDays: document.getElementById('workDays'),
     homeDays: document.getElementById('homeDays'),
-    tolerance: document.getElementById('tolerance'),
+    toleranceOut: document.getElementById('toleranceOut'),
+    toleranceIn: document.getElementById('toleranceIn'),
     saveBtn: document.getElementById('saveBtn'),
     saveNote: document.getElementById('saveNote'),
     setupPanel: document.getElementById('setupPanel'),
@@ -663,6 +831,7 @@
     ringLabel: document.getElementById('ringLabel'),
     legendUncertain: document.getElementById('legendUncertain'),
     legendUncertainText: document.getElementById('legendUncertainText'),
+    legendHoliday: document.getElementById('legendHoliday'),
     statusDot: document.getElementById('statusDot'),
     statusText: document.getElementById('statusText'),
     statusSub: document.getElementById('statusSub'),
@@ -679,12 +848,39 @@
     pdfStart: document.getElementById('pdfStart'),
     pdfEnd: document.getElementById('pdfEnd'),
     pdfBtn: document.getElementById('pdfBtn'),
+    icsBtn: document.getElementById('icsBtn'),
     pdfNote: document.getElementById('pdfNote'),
     installBanner: document.getElementById('installBanner'),
     installBannerText: document.getElementById('installBannerText'),
     installBtn: document.getElementById('installBtn'),
     installDismiss: document.getElementById('installDismiss'),
-    themeColorMeta: document.getElementById('themeColorMeta')
+    themeColorMeta: document.getElementById('themeColorMeta'),
+    viewToggle: document.getElementById('viewToggle'),
+    monthView: document.getElementById('monthView'),
+    yearView: document.getElementById('yearView'),
+    jumpDate: document.getElementById('jumpDate'),
+    jumpBtn: document.getElementById('jumpBtn'),
+    pngBtn: document.getElementById('pngBtn'),
+    statsYear: document.getElementById('statsYear'),
+    statPraca: document.getElementById('statPraca'),
+    statDom: document.getElementById('statDom'),
+    plannerStart: document.getElementById('plannerStart'),
+    plannerEnd: document.getElementById('plannerEnd'),
+    plannerBtn: document.getElementById('plannerBtn'),
+    plannerResult: document.getElementById('plannerResult'),
+    profileSelect: document.getElementById('profileSelect'),
+    profileAdd: document.getElementById('profileAdd'),
+    profileRename: document.getElementById('profileRename'),
+    profileDelete: document.getElementById('profileDelete'),
+    holidayToggle: document.getElementById('holidayToggle'),
+    notifyToggle: document.getElementById('notifyToggle'),
+    colorPraca: document.getElementById('colorPraca'),
+    colorDom: document.getElementById('colorDom'),
+    colorUnsure: document.getElementById('colorUnsure'),
+    colorReset: document.getElementById('colorReset'),
+    shareLink: document.getElementById('shareLink'),
+    shareCopyBtn: document.getElementById('shareCopyBtn'),
+    shareQr: document.getElementById('shareQr')
   };
 
   const today = toDateOnly(new Date());
@@ -696,24 +892,36 @@
   // ---- theme (light / dark), light is the default ----
   const ICON_SUN = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="3.6" stroke="currentColor" stroke-width="1.6"/><path d="M9 1.3v2M9 14.7v2M2.8 9h-2M17.2 9h-2M4.5 4.5 3 3M15 15l-1.5-1.5M4.5 13.5 3 15M15 3l-1.5 1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
   const ICON_MOON = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M15.5 10.8A6.5 6.5 0 1 1 7.2 2.5a5.2 5.2 0 0 0 8.3 8.3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+  const ICON_AUTO = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M9 2.5a6.5 6.5 0 0 1 0 13Z" fill="currentColor"/></svg>';
+  const darkMedia = window.matchMedia('(prefers-color-scheme: dark)');
+  let themeMode = 'light'; // 'light' | 'dark' | 'auto'
 
-  function applyTheme(theme){
-    if (theme === 'dark'){
+  function applyTheme(mode){
+    themeMode = mode;
+    const effectiveDark = mode === 'dark' || (mode === 'auto' && darkMedia.matches);
+    if (effectiveDark){
       document.documentElement.setAttribute('data-theme', 'dark');
-      els.themeToggle.innerHTML = ICON_MOON;
-      els.themeToggle.title = 'Przełącz na jasny styl';
       els.themeColorMeta.setAttribute('content', '#10141B');
     } else {
       document.documentElement.removeAttribute('data-theme');
-      els.themeToggle.innerHTML = ICON_SUN;
-      els.themeToggle.title = 'Przełącz na ciemny styl';
       els.themeColorMeta.setAttribute('content', '#F4F6F9');
     }
+    if (mode === 'auto'){
+      els.themeToggle.innerHTML = ICON_AUTO;
+      els.themeToggle.title = 'Tryb: auto (wg systemu) — kliknij, by przełączyć na jasny';
+    } else if (mode === 'dark'){
+      els.themeToggle.innerHTML = ICON_MOON;
+      els.themeToggle.title = 'Tryb: ciemny — kliknij, by przełączyć na auto';
+    } else {
+      els.themeToggle.innerHTML = ICON_SUN;
+      els.themeToggle.title = 'Tryb: jasny — kliknij, by przełączyć na ciemny';
+    }
   }
+  darkMedia.addEventListener('change', ()=>{ if (themeMode === 'auto') applyTheme('auto'); });
 
   els.themeToggle.addEventListener('click', async ()=>{
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const next = isDark ? 'light' : 'dark';
+    const order = { light:'dark', dark:'auto', auto:'light' };
+    const next = order[themeMode];
     applyTheme(next);
     try{
       if (window.storage && window.storage.set){
@@ -848,6 +1056,45 @@
     return list;
   }
 
+  // ---- Polish public holidays (fixed + Easter-based) ----
+  function easterSunday(year){
+    // Anonymous Gregorian algorithm
+    const a = year % 19, b = Math.floor(year/100), c = year % 100;
+    const d = Math.floor(b/4), e = b % 4, f = Math.floor((b+8)/25);
+    const g = Math.floor((b-f+1)/3), h = (19*a+b-d-g+15) % 30;
+    const i = Math.floor(c/4), k = c % 4, l = (32+2*e+2*i-h-k) % 7;
+    const m = Math.floor((a+11*h+22*l)/451);
+    const month = Math.floor((h+l-7*m+114)/31);
+    const day = ((h+l-7*m+114) % 31) + 1;
+    return new Date(year, month-1, day);
+  }
+  function holidayMapForYear(year){
+    const map = {};
+    const add = (d, name) => { map[fmt(d)] = name; };
+    add(new Date(year,0,1), 'Nowy Rok');
+    add(new Date(year,0,6), 'Trzech Króli');
+    add(new Date(year,4,1), 'Święto Pracy');
+    add(new Date(year,4,3), 'Święto Konstytucji 3 Maja');
+    add(new Date(year,7,15), 'Wniebowzięcie NMP');
+    add(new Date(year,10,1), 'Wszystkich Świętych');
+    add(new Date(year,10,11), 'Święto Niepodległości');
+    add(new Date(year,11,25), 'Boże Narodzenie');
+    add(new Date(year,11,26), 'Drugi dzień Świąt');
+    const easter = easterSunday(year);
+    add(easter, 'Wielkanoc');
+    add(addDays(easter,1), 'Poniedziałek Wielkanocny');
+    add(addDays(easter,49), 'Zielone Świątki');
+    add(addDays(easter,60), 'Boże Ciało');
+    return map;
+  }
+  const holidayCache = {};
+  function holidayName(d){
+    if (!uiPrefs.showHolidays) return null;
+    const y = d.getFullYear();
+    if (!holidayCache[y]) holidayCache[y] = holidayMapForYear(y);
+    return holidayCache[y][fmt(d)] || null;
+  }
+
   // ---- render hero ----
   function renderHero(){
     const info = periodInfo(today);
@@ -860,25 +1107,29 @@
     els.ringFg.style.stroke = info.s === 'praca' ? 'var(--praca)' : 'var(--dom)';
     els.ringDays.textContent = info.daysRemaining;
     els.ringDays.style.color = info.s === 'praca' ? 'var(--praca)' : 'var(--dom)';
-    els.ringLabel.textContent = state.tolerance ? `dni zostało (±${state.tolerance})` : 'dni zostało';
+    const oppositeOfToday = info.s === 'praca' ? 'dom' : 'praca';
+    const activeTolerance = toleranceFor(oppositeOfToday);
+    els.ringLabel.textContent = activeTolerance ? `dni zostało (±${activeTolerance})` : 'dni zostało';
 
     els.statusDot.style.background = info.s === 'praca' ? 'var(--praca)' : 'var(--dom)';
     els.statusText.textContent = info.s === 'praca' ? 'Jesteś w pracy' : 'Jesteś w domu';
     els.statusText.style.color = info.s === 'praca' ? 'var(--praca)' : 'var(--dom)';
 
     const changeLabel = info.s === 'praca' ? 'powrót do domu' : 'wyjazd do pracy';
-    const toleranceNote = state.tolerance ? ` (± ${state.tolerance} ${state.tolerance===1?'dzień':'dni'} tolerancji)` : '';
+    const toleranceNote = activeTolerance ? ` (± ${activeTolerance} ${activeTolerance===1?'dzień':'dni'} tolerancji)` : '';
     els.statusSub.textContent = `Obecny okres trwa ${total} dni. Do zmiany (${changeLabel}) zostało ${info.daysRemaining} ${info.daysRemaining===1?'dzień':'dni'}${toleranceNote}.`;
 
     els.periodStart.textContent = fmtDisplay(info.start);
     els.periodEnd.textContent = fmtDisplay(info.end);
-    els.nextChange.textContent = changeRangeLabel(addDays(info.end,1));
+    els.nextChange.textContent = changeRangeLabel(addDays(info.end,1), oppositeOfToday);
 
-    els.legendUncertain.style.display = state.tolerance ? 'flex' : 'none';
-    if (state.tolerance) els.legendUncertainText.textContent = `Możliwe przesunięcie (±${state.tolerance} dni)`;
+    const anyTolerance = (state.toleranceOut||0) > 0 || (state.toleranceIn||0) > 0;
+    els.legendUncertain.style.display = anyTolerance ? 'flex' : 'none';
+    if (anyTolerance) els.legendUncertainText.textContent = 'Możliwe przesunięcie';
+    els.legendHoliday.style.display = uiPrefs.showHolidays ? 'flex' : 'none';
   }
 
-  // ---- render calendar ----
+  // ---- render calendar (month view) ----
   function renderCalendar(){
     els.calTitle.textContent = `${monthsPL[viewMonth]} ${viewYear}`;
     els.daysGrid.innerHTML = '';
@@ -899,18 +1150,65 @@
       if (fmt(d) === fmt(info.end)) cell.classList.add('transition');
 
       let title = fmtDisplay(d) + ' — ' + (info.s==='praca' ? 'w pracy' : 'w domu');
-      if (state.tolerance > 0){
-        const daysFromStart = Math.round((toDateOnly(d) - toDateOnly(info.start)) / MS_DAY);
-        const daysToEnd = Math.round((toDateOnly(info.end) - toDateOnly(d)) / MS_DAY);
-        if (daysFromStart < state.tolerance || daysToEnd < state.tolerance){
-          cell.classList.add('uncertain');
-          title += ` (± ${state.tolerance} dni — może się okazać dniem zmiany)`;
-        }
+      if (isUncertainDate(d, info)){
+        cell.classList.add('uncertain');
+        title += ' (może się okazać dniem zmiany)';
       }
+      const hName = holidayName(d);
+      if (hName){ cell.classList.add('holiday'); title += ` · ${hName}`; }
+      const note = state.notes[fmt(d)];
+      if (note){ cell.classList.add('has-note'); title += ` · notatka: ${note}`; }
+
       cell.textContent = d.getDate();
       cell.title = title;
+      cell.dataset.date = fmt(d);
       els.daysGrid.appendChild(cell);
     }
+  }
+
+  // ---- render calendar (year view) ----
+  function renderYear(){
+    els.yearView.innerHTML = '';
+    for (let m=0; m<12; m++){
+      const box = document.createElement('div');
+      box.className = 'year-month';
+      const cap = monthsPL[m].charAt(0).toUpperCase() + monthsPL[m].slice(1);
+      const titleEl = document.createElement('div');
+      titleEl.className = 'ym-title';
+      titleEl.textContent = cap;
+      box.appendChild(titleEl);
+      const grid = document.createElement('div');
+      grid.className = 'ym-grid';
+      const firstOfMonth = new Date(viewYear, m, 1);
+      let startWeekday = firstOfMonth.getDay();
+      startWeekday = startWeekday === 0 ? 6 : startWeekday - 1;
+      const gridStart = addDays(firstOfMonth, -startWeekday);
+      for (let i=0;i<42;i++){
+        const d = addDays(gridStart, i);
+        const cell = document.createElement('div');
+        if (d.getMonth() !== m){
+          cell.className = 'ym-day muted';
+        } else {
+          const info = periodInfo(d);
+          cell.className = 'ym-day ' + info.s;
+          cell.title = fmtDisplay(d) + ' — ' + (info.s==='praca' ? 'w pracy' : 'w domu');
+        }
+        grid.appendChild(cell);
+      }
+      box.appendChild(grid);
+      els.yearView.appendChild(box);
+    }
+  }
+
+  function renderStats(){
+    els.statsYear.textContent = `(${viewYear})`;
+    let pracaDays = 0, domDays = 0;
+    const jan1 = new Date(viewYear,0,1), dec31 = new Date(viewYear,11,31);
+    for (let d = jan1; d <= dec31; d = addDays(d,1)){
+      if (periodInfo(d).s === 'praca') pracaDays++; else domDays++;
+    }
+    els.statPraca.textContent = pracaDays;
+    els.statDom.textContent = domDays;
   }
 
   function renderUpcoming(){
@@ -920,7 +1218,8 @@
       const row = document.createElement('div');
       row.className = 'up-item';
       const dur = Math.round((toDateOnly(p.end) - toDateOnly(p.start))/MS_DAY) + 1;
-      const tol = state.tolerance ? `<div class="up-dates" style="color:var(--unsure)">start: ${changeRangeLabel(p.start)}</div>` : '';
+      const t = toleranceFor(p.s);
+      const tol = t ? `<div class="up-dates" style="color:var(--unsure)">start: ${changeRangeLabel(p.start, p.s)}</div>` : '';
       row.innerHTML = `
         <div class="up-bar ${p.s}"></div>
         <div class="up-main">
@@ -934,10 +1233,14 @@
     });
   }
 
+  let currentView = 'month';
+
   function renderAll(){
     renderHero();
-    renderCalendar();
+    if (currentView === 'year'){ renderYear(); } else { renderCalendar(); }
+    renderStats();
     renderUpcoming();
+    renderShareLink();
   }
 
   // ---- setup form wiring ----
@@ -945,10 +1248,17 @@
     els.changeDate.value = state.changeDate;
     els.workDays.value = state.workDays;
     els.homeDays.value = state.homeDays;
-    els.tolerance.value = state.tolerance || 0;
+    els.toleranceOut.value = state.toleranceOut || 0;
+    els.toleranceIn.value = state.toleranceIn || 0;
     [...els.stateSeg.children].forEach(btn=>{
       btn.classList.toggle('active', btn.dataset.v === state.currentState);
     });
+    els.holidayToggle.checked = !!uiPrefs.showHolidays;
+    els.notifyToggle.checked = !!uiPrefs.notifyEnabled;
+    els.colorPraca.value = uiPrefs.colorPraca || '#B9720E';
+    els.colorDom.value = uiPrefs.colorDom || '#1C8F73';
+    els.colorUnsure.value = uiPrefs.colorUnsure || '#6E4FC4';
+    syncProfileSelect();
   }
 
   els.stateSeg.addEventListener('click', (e)=>{
@@ -958,39 +1268,133 @@
     btn.classList.add('active');
   });
 
+  els.viewToggle.addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    currentView = btn.dataset.v;
+    [...els.viewToggle.children].forEach(b=>b.classList.toggle('active', b===btn));
+    els.monthView.style.display = currentView === 'month' ? 'block' : 'none';
+    els.yearView.style.display = currentView === 'year' ? 'grid' : 'none';
+    if (currentView === 'year') renderYear(); else renderCalendar();
+  });
+
   els.saveBtn.addEventListener('click', async ()=>{
     const activeBtn = els.stateSeg.querySelector('button.active');
     state.currentState = activeBtn ? activeBtn.dataset.v : 'praca';
     state.changeDate = els.changeDate.value || state.changeDate;
     state.workDays = Math.max(1, parseInt(els.workDays.value) || 28);
     state.homeDays = Math.max(1, parseInt(els.homeDays.value) || 28);
-    state.tolerance = Math.min(10, Math.max(0, parseInt(els.tolerance.value) || 0));
+    state.toleranceOut = Math.min(10, Math.max(0, parseInt(els.toleranceOut.value) || 0));
+    state.toleranceIn = Math.min(10, Math.max(0, parseInt(els.toleranceIn.value) || 0));
+
+    uiPrefs.showHolidays = els.holidayToggle.checked;
+    uiPrefs.notifyEnabled = els.notifyToggle.checked;
+    uiPrefs.colorPraca = els.colorPraca.value;
+    uiPrefs.colorDom = els.colorDom.value;
+    uiPrefs.colorUnsure = els.colorUnsure.value;
+    applyAccentColors();
+    if (uiPrefs.notifyEnabled && 'Notification' in window && Notification.permission === 'default'){
+      try{ await Notification.requestPermission(); }catch(e){ /* ignored */ }
+    }
+
     viewMonth = today.getMonth();
     viewYear = today.getFullYear();
     renderAll();
-    await persist();
+    await persistProfiles();
+    await persistUiPrefs();
     els.saveNote.textContent = 'Zapisano';
     setTimeout(()=>{ els.saveNote.textContent=''; }, 2000);
     els.setupPanel.removeAttribute('open');
   });
 
   els.prevBtn.addEventListener('click', ()=>{
+    if (currentView === 'year'){ viewYear--; renderYear(); renderStats(); return; }
     viewMonth--; if (viewMonth<0){ viewMonth=11; viewYear--; }
     renderCalendar();
   });
   els.nextBtn.addEventListener('click', ()=>{
+    if (currentView === 'year'){ viewYear++; renderYear(); renderStats(); return; }
     viewMonth++; if (viewMonth>11){ viewMonth=0; viewYear++; }
     renderCalendar();
   });
   els.todayBtn.addEventListener('click', ()=>{
     viewMonth = today.getMonth(); viewYear = today.getFullYear();
+    if (currentView === 'year'){ renderYear(); renderStats(); } else { renderCalendar(); }
+  });
+
+  // ---- day notes ----
+  els.daysGrid.addEventListener('click', async (e)=>{
+    const cell = e.target.closest('.day');
+    if (!cell || !cell.dataset.date) return;
+    const key = cell.dataset.date;
+    const existing = state.notes[key] || '';
+    const text = prompt(`Notatka na ${key.split('-').reverse().join('.')}:`, existing);
+    if (text === null) return;
+    if (text.trim() === ''){ delete state.notes[key]; } else { state.notes[key] = text.trim(); }
     renderCalendar();
+    await persistProfiles();
+  });
+
+  // ---- accent colors ----
+  function applyAccentColors(){
+    const root = document.documentElement;
+    if (uiPrefs.colorPraca) root.style.setProperty('--praca', uiPrefs.colorPraca);
+    if (uiPrefs.colorDom) root.style.setProperty('--dom', uiPrefs.colorDom);
+    if (uiPrefs.colorUnsure) root.style.setProperty('--unsure', uiPrefs.colorUnsure);
+  }
+  els.colorReset.addEventListener('click', ()=>{
+    uiPrefs.colorPraca = null; uiPrefs.colorDom = null; uiPrefs.colorUnsure = null;
+    document.documentElement.style.removeProperty('--praca');
+    document.documentElement.style.removeProperty('--dom');
+    document.documentElement.style.removeProperty('--unsure');
+    els.colorPraca.value = '#B9720E'; els.colorDom.value = '#1C8F73'; els.colorUnsure.value = '#6E4FC4';
+  });
+
+  // ---- swipe gestures on the month grid ----
+  (function swipeSetup(){
+    let touchStartX = null;
+    els.daysGrid.addEventListener('touchstart', (e)=>{ touchStartX = e.changedTouches[0].clientX; }, {passive:true});
+    els.daysGrid.addEventListener('touchend', (e)=>{
+      if (touchStartX === null) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      touchStartX = null;
+      if (Math.abs(dx) < 50) return;
+      if (dx < 0) els.nextBtn.click(); else els.prevBtn.click();
+    }, {passive:true});
+  })();
+
+  // ---- planner ----
+  els.plannerBtn.addEventListener('click', ()=>{
+    const s = els.plannerStart.value, e = els.plannerEnd.value;
+    if (!s || !e) return;
+    let a = toDateOnly(new Date(s+'T00:00:00'));
+    let b = toDateOnly(new Date(e+'T00:00:00'));
+    if (b < a){ const t=a; a=b; b=t; }
+    let pracaCount = 0, domCount = 0;
+    for (let d=a; d<=b; d=addDays(d,1)){
+      if (periodInfo(d).s === 'praca') pracaCount++; else domCount++;
+    }
+    const total = pracaCount + domCount;
+    els.plannerResult.classList.remove('ok','bad','mixed');
+    if (domCount === total){
+      els.plannerResult.classList.add('ok');
+      els.plannerResult.textContent = `Cały zakres (${total} dni) mieści się w Twoim wolnym czasie — możesz planować wyjazd.`;
+    } else if (pracaCount === total){
+      els.plannerResult.classList.add('bad');
+      els.plannerResult.textContent = `Cały zakres (${total} dni) przypada na Twój okres pracy.`;
+    } else {
+      els.plannerResult.classList.add('mixed');
+      els.plannerResult.textContent = `Zakres jest mieszany: ${domCount} dni w domu i ${pracaCount} dni w pracy.`;
+    }
   });
 
   // ---- PDF export ----
   function ensurePdfDefaults(){
     if (!els.pdfStart.value) els.pdfStart.value = fmt(today);
     if (!els.pdfEnd.value) els.pdfEnd.value = fmt(addDays(today, (state.workDays + state.homeDays) || 56));
+    if (!els.plannerStart.value) els.plannerStart.value = fmt(today);
+    if (!els.plannerEnd.value) els.plannerEnd.value = fmt(addDays(today, 7));
+    if (!els.jumpDate.value) els.jumpDate.value = fmt(today);
   }
 
   function drawLegendRow(doc, x, y){
@@ -998,7 +1402,7 @@
       { label:'W pracy', fill:[250,235,212], line:[185,114,14] },
       { label:'W domu', fill:[219,241,235], line:[28,143,115] }
     ];
-    if (state.tolerance > 0) items.push({ label:`Tolerancja ± ${state.tolerance} dni`, fill:[237,231,251], line:[110,79,196] });
+    if ((state.toleranceOut||0) > 0 || (state.toleranceIn||0) > 0) items.push({ label:'Tolerancja przesunięcia', fill:[237,231,251], line:[110,79,196] });
     let cx = x;
     doc.setFontSize(8.5);
     doc.setFont('Inter','normal');
@@ -1044,12 +1448,7 @@
 
       if (inMonth && inRange){
         const info = periodInfo(d);
-        let uncertain = false;
-        if (state.tolerance > 0){
-          const daysFromStart = Math.round((toDateOnly(d) - toDateOnly(info.start)) / MS_DAY);
-          const daysToEnd = Math.round((toDateOnly(info.end) - toDateOnly(d)) / MS_DAY);
-          uncertain = daysFromStart < state.tolerance || daysToEnd < state.tolerance;
-        }
+        const uncertain = isUncertainDate(d, info);
         let fill, line;
         if (uncertain){ fill=[237,231,251]; line=[110,79,196]; }
         else if (info.s === 'praca'){ fill=[250,235,212]; line=[185,114,14]; }
@@ -1112,7 +1511,8 @@
     doc.text(`Okres: ${fmtDisplay(rangeStart)} – ${fmtDisplay(rangeEnd)}`, marginX, y);
     y += 5;
     let cycleLine = `Cykl: ${state.workDays} dni w pracy / ${state.homeDays} dni w domu`;
-    if (state.tolerance) cycleLine += ` · tolerancja ± ${state.tolerance} dni`;
+    if (state.toleranceOut) cycleLine += ` · tolerancja wyjazdu ± ${state.toleranceOut} dni`;
+    if (state.toleranceIn) cycleLine += ` · tolerancja powrotu ± ${state.toleranceIn} dni`;
     doc.text(cycleLine, marginX, y);
     y += 8;
     drawLegendRow(doc, marginX, y);
@@ -1151,35 +1551,287 @@
 
   els.pdfBtn.addEventListener('click', generatePdf);
 
-  // ---- persistence (window.storage if available; otherwise session-only) ----
-  async function persist(){
-    try{
-      if (window.storage && window.storage.set){
-        await window.storage.set('rota-state', JSON.stringify(state));
-      }
-    }catch(e){ /* storage unavailable — state stays in memory for this session */ }
+  // ---- .ics export ----
+  function generateIcs(){
+    let rangeStart = toDateOnly(new Date((els.pdfStart.value || fmt(today)) + 'T00:00:00'));
+    let rangeEnd = toDateOnly(new Date((els.pdfEnd.value || fmt(addDays(today,56))) + 'T00:00:00'));
+    if (rangeEnd < rangeStart){ const t = rangeStart; rangeStart = rangeEnd; rangeEnd = t; }
+    const pad = n => String(n).padStart(2,'0');
+    const icsDate = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+    const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ROTA//PL','CALSCALE:GREGORIAN'];
+    let cursor = rangeStart, idx = 0;
+    while (cursor <= rangeEnd){
+      const info = periodInfo(cursor);
+      const segEnd = info.end > rangeEnd ? rangeEnd : info.end;
+      lines.push('BEGIN:VEVENT');
+      lines.push(`UID:rota-${icsDate(cursor)}-${idx++}@rota.local`);
+      lines.push(`DTSTART;VALUE=DATE:${icsDate(cursor)}`);
+      lines.push(`DTEND;VALUE=DATE:${icsDate(addDays(segEnd,1))}`);
+      lines.push(`SUMMARY:${info.s === 'praca' ? 'W pracy' : 'W domu'} (ROTA)`);
+      lines.push('END:VEVENT');
+      cursor = addDays(segEnd, 1);
+    }
+    lines.push('END:VCALENDAR');
+    const blob = new Blob([lines.join('\r\n')], { type:'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `rota-grafik-${fmt(rangeStart)}_${fmt(rangeEnd)}.ics`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
-  async function restore(){
-    try{
-      if (window.storage && window.storage.get){
-        const res = await window.storage.get('rota-state');
-        if (res && res.value){
-          const saved = JSON.parse(res.value);
-          state = Object.assign(state, saved);
+  els.icsBtn.addEventListener('click', generateIcs);
+
+  // ---- PNG export (current month view) ----
+  function generatePng(){
+    const scale = 2, W = 700, H = 760;
+    const canvas = document.createElement('canvas');
+    canvas.width = W*scale; canvas.height = H*scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#1a212b';
+    ctx.font = 'bold 26px sans-serif';
+    const cap = monthsPL[viewMonth].charAt(0).toUpperCase() + monthsPL[viewMonth].slice(1);
+    ctx.fillText(`${cap} ${viewYear}`, 20, 38);
+
+    const weekLabels = ['Pn','Wt','Śr','Cz','Pt','So','Nd'];
+    const cellW = 660/7, cellH = 100;
+    ctx.font = '13px sans-serif'; ctx.fillStyle = '#5b6472';
+    weekLabels.forEach((l,i)=> ctx.fillText(l, 20+i*cellW+cellW/2-6, 65));
+
+    const firstOfMonth = new Date(viewYear, viewMonth, 1);
+    let startWeekday = firstOfMonth.getDay(); startWeekday = startWeekday===0?6:startWeekday-1;
+    const gridStart = addDays(firstOfMonth, -startWeekday);
+    for (let i=0;i<42;i++){
+      const d = addDays(gridStart, i);
+      const row = Math.floor(i/7), col = i%7;
+      const x = 20+col*cellW, y = 78+row*cellH;
+      const inMonth = d.getMonth() === viewMonth;
+      if (inMonth){
+        const info = periodInfo(d);
+        const uncertain = isUncertainDate(d, info);
+        ctx.fillStyle = uncertain ? '#ede7fb' : (info.s === 'praca' ? '#faebd4' : '#dbf1eb');
+        ctx.strokeStyle = uncertain ? '#6e4fc4' : (info.s === 'praca' ? '#b9720e' : '#1c8f73');
+      } else {
+        ctx.fillStyle = '#f5f5f5'; ctx.strokeStyle = '#e6e6e6';
+      }
+      ctx.lineWidth = 1;
+      ctx.fillRect(x, y, cellW-6, cellH-6);
+      ctx.strokeRect(x, y, cellW-6, cellH-6);
+      ctx.fillStyle = inMonth ? '#1a212b' : '#bbbbbb';
+      ctx.font = '13px sans-serif';
+      ctx.fillText(String(d.getDate()), x+6, y+18);
+      if (inMonth){
+        const note = state.notes[fmt(d)];
+        if (note){
+          ctx.font = '10px sans-serif'; ctx.fillStyle = '#5b6472';
+          ctx.fillText(note.length>16 ? note.slice(0,15)+'…' : note, x+6, y+36);
         }
       }
-    }catch(e){ /* no saved state yet */ }
+    }
+    canvas.toBlob(blob=>{
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `rota-${monthsPL[viewMonth]}-${viewYear}.png`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
+  els.pngBtn.addEventListener('click', generatePng);
+
+  els.jumpBtn.addEventListener('click', ()=>{
+    if (!els.jumpDate.value) return;
+    const d = toDateOnly(new Date(els.jumpDate.value + 'T00:00:00'));
+    viewMonth = d.getMonth(); viewYear = d.getFullYear();
+    if (currentView === 'year'){ renderYear(); renderStats(); } else { renderCalendar(); }
+  });
+
+  // ---- profiles ----
+  function syncProfileSelect(){
+    els.profileSelect.innerHTML = '';
+    profiles.forEach(p=>{
+      const opt = document.createElement('option');
+      opt.value = p.id; opt.textContent = p.name;
+      if (p.id === activeProfileId) opt.selected = true;
+      els.profileSelect.appendChild(opt);
+    });
+  }
+  els.profileSelect.addEventListener('change', async ()=>{
+    activeProfileId = els.profileSelect.value;
+    state = profiles.find(p=>p.id===activeProfileId).data;
+    viewMonth = today.getMonth(); viewYear = today.getFullYear();
+    syncFormFromState();
+    renderAll();
+    await persistProfiles();
+  });
+  els.profileAdd.addEventListener('click', async ()=>{
+    const name = prompt('Nazwa nowego profilu:', `Grafik ${profiles.length+1}`);
+    if (!name) return;
+    const id = 'p'+Date.now();
+    profiles.push({ id, name: name.trim(), data: defaultScheduleData() });
+    activeProfileId = id;
+    state = profiles[profiles.length-1].data;
+    syncFormFromState();
+    ensurePdfDefaults();
+    viewMonth = today.getMonth(); viewYear = today.getFullYear();
+    renderAll();
+    await persistProfiles();
+  });
+  els.profileRename.addEventListener('click', async ()=>{
+    const prof = profiles.find(p=>p.id===activeProfileId);
+    const name = prompt('Nowa nazwa profilu:', prof.name);
+    if (!name) return;
+    prof.name = name.trim();
+    syncProfileSelect();
+    await persistProfiles();
+  });
+  els.profileDelete.addEventListener('click', async ()=>{
+    if (profiles.length <= 1){ alert('To jedyny profil — nie można go usunąć.'); return; }
+    const prof = profiles.find(p=>p.id===activeProfileId);
+    if (!confirm(`Usunąć profil „${prof.name}”? Tej operacji nie można cofnąć.`)) return;
+    profiles = profiles.filter(p=>p.id!==activeProfileId);
+    activeProfileId = profiles[0].id;
+    state = profiles[0].data;
+    syncFormFromState();
+    viewMonth = today.getMonth(); viewYear = today.getFullYear();
+    renderAll();
+    await persistProfiles();
+  });
+
+  // ---- share link + QR ----
+  function encodeShareState(){
+    const payload = {
+      currentState: state.currentState, changeDate: state.changeDate,
+      workDays: state.workDays, homeDays: state.homeDays,
+      toleranceOut: state.toleranceOut||0, toleranceIn: state.toleranceIn||0
+    };
+    return btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  }
+  function decodeShareState(b64){
+    try{ return JSON.parse(decodeURIComponent(escape(atob(b64)))); }catch(e){ return null; }
+  }
+  function renderShareLink(){
+    const url = `${location.origin}${location.pathname}?s=${encodeShareState()}`;
+    els.shareLink.value = url;
+    els.shareQr.onerror = ()=>{ els.shareQr.style.display = 'none'; };
+    els.shareQr.onload = ()=>{ els.shareQr.style.display = 'inline-block'; };
+    els.shareQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+  }
+  els.shareCopyBtn.addEventListener('click', async ()=>{
+    try{
+      await navigator.clipboard.writeText(els.shareLink.value);
+      els.shareCopyBtn.textContent = 'Skopiowano!';
+    }catch(e){
+      els.shareLink.select();
+    }
+    setTimeout(()=>{ els.shareCopyBtn.textContent = 'Kopiuj'; }, 2000);
+  });
+  function checkImportFromUrl(){
+    const params = new URLSearchParams(location.search);
+    const s = params.get('s');
+    if (!s) return;
+    const data = decodeShareState(s);
+    history.replaceState(null, '', location.pathname);
+    if (!data || !data.changeDate) return;
+    if (!confirm('Ten link zawiera udostępniony grafik. Zaimportować go jako nowy profil?')) return;
+    const id = 'p'+Date.now();
+    const name = prompt('Nazwa nowego profilu:', 'Zaimportowany grafik') || 'Zaimportowany grafik';
+    profiles.push({ id, name, data: Object.assign(defaultScheduleData(), data, {notes:{}}) });
+    activeProfileId = id;
+    state = profiles[profiles.length-1].data;
+    persistProfiles();
+  }
+
+  // ---- notification reminder (day before a change, while app is open) ----
+  async function checkNotifyReminder(){
+    if (!uiPrefs.notifyEnabled) return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const info = periodInfo(today);
+    if (info.daysRemaining !== 1) return;
+    let lastNotified = null;
+    try{
+      if (window.storage && window.storage.get){
+        const res = await window.storage.get('rota-last-notified');
+        if (res && res.value) lastNotified = res.value;
+      }
+    }catch(e){}
+    if (lastNotified === fmt(today)) return;
+    const changeLabel = info.s === 'praca' ? 'powrót do domu' : 'wyjazd do pracy';
+    try{ new Notification('ROTA', { body: `Jutro: ${changeLabel}.` }); }catch(e){}
+    try{
+      if (window.storage && window.storage.set) await window.storage.set('rota-last-notified', fmt(today));
+    }catch(e){}
+  }
+
+  // ---- persistence (window.storage if available; otherwise session-only) ----
+  async function persistProfiles(){
+    try{
+      if (window.storage && window.storage.set){
+        await window.storage.set('rota-profiles', JSON.stringify({ profiles, activeProfileId }));
+      }
+    }catch(e){ /* state stays in-memory for this session */ }
+  }
+  async function persistUiPrefs(){
+    try{
+      if (window.storage && window.storage.set){
+        await window.storage.set('rota-ui-prefs', JSON.stringify(uiPrefs));
+      }
+    }catch(e){ /* prefs stay in-memory for this session */ }
+  }
+  async function restoreProfiles(){
+    try{
+      if (window.storage && window.storage.get){
+        const res = await window.storage.get('rota-profiles');
+        if (res && res.value){
+          const saved = JSON.parse(res.value);
+          if (saved.profiles && saved.profiles.length){
+            profiles = saved.profiles.map(p => ({
+              id: p.id, name: p.name,
+              data: Object.assign(defaultScheduleData(), p.data, { notes: (p.data && p.data.notes) || {} })
+            }));
+            activeProfileId = (saved.activeProfileId && profiles.find(p=>p.id===saved.activeProfileId)) ? saved.activeProfileId : profiles[0].id;
+            state = profiles.find(p=>p.id===activeProfileId).data;
+            return;
+          }
+        }
+        // migrate a legacy single-schedule save (pre-profiles version of the app)
+        const legacy = await window.storage.get('rota-state').catch(()=>null);
+        if (legacy && legacy.value){
+          const saved = JSON.parse(legacy.value);
+          const tol = saved.tolerance || 0;
+          const data = Object.assign(defaultScheduleData(), saved, {
+            toleranceOut: saved.toleranceOut != null ? saved.toleranceOut : tol,
+            toleranceIn: saved.toleranceIn != null ? saved.toleranceIn : tol,
+            notes: saved.notes || {}
+          });
+          delete data.tolerance;
+          profiles = [{ id:'default', name:'Grafik 1', data }];
+          activeProfileId = 'default';
+          state = profiles[0].data;
+          await persistProfiles();
+        }
+      }
+    }catch(e){ /* start with the built-in default profile */ }
+  }
+  async function restoreUiPrefs(){
+    try{
+      if (window.storage && window.storage.get){
+        const res = await window.storage.get('rota-ui-prefs');
+        if (res && res.value) uiPrefs = Object.assign(uiPrefs, JSON.parse(res.value));
+      }
+    }catch(e){ /* defaults stay in effect */ }
+    applyAccentColors();
+  }
+
+  (async function boot(){
+    await restoreProfiles();
+    await restoreUiPrefs();
+    checkImportFromUrl();
     syncFormFromState();
     ensurePdfDefaults();
     renderAll();
-    if (state.changeDate){
-      // if user already has a saved schedule, keep panel closed
-      const hasSaved = els.saveNote;
-    }
-  }
-
-  syncFormFromState();
-  restore();
+    checkNotifyReminder();
+  })();
 })();
 </script>
 </body>
