@@ -1572,6 +1572,23 @@
       doc.text(it.label, cx+6, y);
       cx += doc.getTextWidth(it.label) + 16;
     });
+
+    const icons = [
+      { label:'wyjazd', color:[185,114,14], dir:'praca' },
+      { label:'powrót', color:[28,143,115], dir:'dom' }
+    ];
+    icons.forEach(it=>{
+      const ix = cx + 2, iy = y - 0.6;
+      doc.setFillColor(it.color[0], it.color[1], it.color[2]);
+      if (it.dir === 'praca'){
+        doc.triangle(ix, iy-1.5, ix, iy+1.5, ix+2.1, iy, 'F');
+      } else {
+        doc.triangle(ix+2.1, iy-1.5, ix+2.1, iy+1.5, ix, iy, 'F');
+      }
+      doc.setTextColor(70,70,70);
+      doc.text(it.label, ix+5, y);
+      cx = ix + 5 + doc.getTextWidth(it.label) + 12;
+    });
   }
 
   function drawMonthBlock(doc, x, y, colW, cellW, cellH, year, month, rangeStart, rangeEnd){
@@ -1615,6 +1632,18 @@
         doc.setDrawColor(line[0], line[1], line[2]);
         doc.setLineWidth(0.25);
         doc.roundedRect(cx+0.4, cy+0.4, cellW-0.8, cellH-0.8, 1, 1, 'FD');
+
+        if (fmt(d) === fmt(info.end)){
+          const enteringState = info.s === 'praca' ? 'dom' : 'praca';
+          const ix = cx + cellW - 2.6, iy = cy + cellH - 2.2;
+          doc.setFillColor(enteringState === 'praca' ? 185 : 28, enteringState === 'praca' ? 114 : 143, enteringState === 'praca' ? 14 : 115);
+          if (enteringState === 'praca'){
+            doc.triangle(ix-1.7, iy-1.5, ix-1.7, iy+0.3, ix+0.4, iy-0.6, 'F'); // wyjazd — strzałka w prawo
+          } else {
+            doc.triangle(ix+0.4, iy-1.5, ix+0.4, iy+0.3, ix-1.7, iy-0.6, 'F'); // powrót — strzałka w lewo
+          }
+        }
+
         doc.setTextColor(40,40,40);
         doc.setFont('Inter', fmt(d) === fmt(today) ? 'bold' : 'normal');
       } else {
@@ -1764,8 +1793,8 @@
       const row = Math.floor(i/7), col = i%7;
       const x = 20+col*cellW, y = 78+row*cellH;
       const inMonth = d.getMonth() === viewMonth;
+      const info = inMonth ? periodInfo(d) : null;
       if (inMonth){
-        const info = periodInfo(d);
         const uncertain = isUncertainDate(d, info);
         ctx.fillStyle = uncertain ? '#ede7fb' : (info.s === 'praca' ? '#faebd4' : '#dbf1eb');
         ctx.strokeStyle = uncertain ? '#6e4fc4' : (info.s === 'praca' ? '#b9720e' : '#1c8f73');
@@ -1775,6 +1804,18 @@
       ctx.lineWidth = 1;
       ctx.fillRect(x, y, cellW-6, cellH-6);
       ctx.strokeRect(x, y, cellW-6, cellH-6);
+      if (inMonth && fmt(d) === fmt(info.end)){
+        const enteringState = info.s === 'praca' ? 'dom' : 'praca';
+        const ix = x + cellW - 6 - 14, iy = y + cellH - 6 - 12;
+        ctx.fillStyle = enteringState === 'praca' ? '#b9720e' : '#1c8f73';
+        ctx.beginPath();
+        if (enteringState === 'praca'){
+          ctx.moveTo(ix, iy-6); ctx.lineTo(ix, iy+6); ctx.lineTo(ix+9, iy);
+        } else {
+          ctx.moveTo(ix+9, iy-6); ctx.lineTo(ix+9, iy+6); ctx.lineTo(ix, iy);
+        }
+        ctx.closePath(); ctx.fill();
+      }
       ctx.fillStyle = inMonth ? '#1a212b' : '#bbbbbb';
       ctx.font = '13px sans-serif';
       ctx.fillText(String(d.getDate()), x+6, y+18);
@@ -1786,6 +1827,13 @@
         }
       }
     }
+    ctx.font = '11px sans-serif'; ctx.fillStyle = '#5b6472';
+    ctx.beginPath(); ctx.fillStyle = '#b9720e';
+    ctx.moveTo(20, H-24); ctx.lineTo(20, H-12); ctx.lineTo(29, H-18); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#5b6472'; ctx.fillText('wyjazd', 34, H-15);
+    ctx.beginPath(); ctx.fillStyle = '#1c8f73';
+    ctx.moveTo(110, H-24); ctx.lineTo(110, H-12); ctx.lineTo(101, H-18); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#5b6472'; ctx.fillText('powrót', 116, H-15);
     canvas.toBlob(blob=>{
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
