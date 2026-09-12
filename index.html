@@ -797,6 +797,26 @@
     </div>
   </div>
 
+  <div class="card" style="margin-top:22px;">
+    <div class="side-title">Śledzenie statku</div>
+    <div class="field-hint" style="margin-top:-6px;margin-bottom:14px;">Podaj MMSI lub IMO statku, aby zobaczyć jego aktualną pozycję (dane na żywo z VesselFinder). Wymaga połączenia z internetem.</div>
+    <div class="field-row">
+      <div class="field"><label>Nazwa statku (opcjonalnie)</label><input type="text" id="shipName" placeholder="np. Stena Baltica"></div>
+      <div class="field"></div>
+      <div class="field"><label>MMSI</label><input type="text" id="shipMmsi" inputmode="numeric" placeholder="np. 265547680"></div>
+      <div class="field"><label>IMO</label><input type="text" id="shipImo" inputmode="numeric" placeholder="np. 9506291"></div>
+    </div>
+    <div class="setup-actions">
+      <button class="secondary" id="shipShowBtn" type="button">Pokaż statek</button>
+      <button class="mini-btn" id="shipClearBtn" type="button">Wyczyść</button>
+    </div>
+    <div id="shipWidgetWrap" style="display:none; margin-top:16px;">
+      <div id="shipWidgetTitle" style="font-weight:600; margin-bottom:8px;"></div>
+      <iframe id="shipIframe" title="Pozycja statku" style="width:100%; height:340px; border:1px solid var(--border); border-radius:10px;" loading="lazy"></iframe>
+      <div class="field-hint" style="margin-top:8px;">Źródło: <a href="https://www.vesselfinder.com" target="_blank" rel="noopener">VesselFinder</a></div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="dayModalOverlay">
     <div class="modal-card" id="dayModalCard">
       <button class="modal-close" id="dayModalClose" type="button" aria-label="Zamknij">✕</button>
@@ -978,7 +998,15 @@
     dayModalHolidayName: document.getElementById('dayModalHolidayName'),
     dayModalNote: document.getElementById('dayModalNote'),
     dayModalSave: document.getElementById('dayModalSave'),
-    dayModalDelete: document.getElementById('dayModalDelete')
+    dayModalDelete: document.getElementById('dayModalDelete'),
+    shipName: document.getElementById('shipName'),
+    shipMmsi: document.getElementById('shipMmsi'),
+    shipImo: document.getElementById('shipImo'),
+    shipShowBtn: document.getElementById('shipShowBtn'),
+    shipClearBtn: document.getElementById('shipClearBtn'),
+    shipWidgetWrap: document.getElementById('shipWidgetWrap'),
+    shipWidgetTitle: document.getElementById('shipWidgetTitle'),
+    shipIframe: document.getElementById('shipIframe')
   };
 
   const today = toDateOnly(new Date());
@@ -1490,6 +1518,59 @@
     closeDayModal();
     renderCalendar();
     await persistProfiles();
+  });
+
+  // ---- ship tracking (VesselFinder embed) ----
+  function buildVesselFinderUrl(mmsi, imo){
+    const params = new URLSearchParams();
+    params.set('width', '100%');
+    params.set('height', '340');
+    params.set('zoom', '7');
+    params.set('names', 'true');
+    params.set('track', 'true');
+    if (imo) params.set('imo', imo);
+    else if (mmsi) params.set('mmsi', mmsi);
+    return `https://www.vesselfinder.com/aismap?${params.toString()}`;
+  }
+  function showShipWidget(){
+    const mmsi = els.shipMmsi.value.trim();
+    const imo = els.shipImo.value.trim();
+    if (!mmsi && !imo){ alert('Podaj MMSI lub IMO statku.'); return; }
+    els.shipWidgetTitle.textContent = els.shipName.value.trim() || 'Statek';
+    els.shipIframe.src = buildVesselFinderUrl(mmsi, imo);
+    els.shipWidgetWrap.style.display = 'block';
+  }
+  async function persistShipInfo(){
+    const data = { name: els.shipName.value.trim(), mmsi: els.shipMmsi.value.trim(), imo: els.shipImo.value.trim() };
+    try{
+      if (window.storage && window.storage.set){
+        await window.storage.set('rota-ship', JSON.stringify(data));
+      }
+    }catch(e){ /* stays in-memory for this session */ }
+  }
+  async function restoreShipInfo(){
+    try{
+      if (window.storage && window.storage.get){
+        const res = await window.storage.get('rota-ship');
+        if (res && res.value){
+          const data = JSON.parse(res.value);
+          els.shipName.value = data.name || '';
+          els.shipMmsi.value = data.mmsi || '';
+          els.shipImo.value = data.imo || '';
+          if (data.mmsi || data.imo) showShipWidget();
+        }
+      }
+    }catch(e){ /* no saved ship yet */ }
+  }
+  els.shipShowBtn.addEventListener('click', async ()=>{
+    showShipWidget();
+    await persistShipInfo();
+  });
+  els.shipClearBtn.addEventListener('click', async ()=>{
+    els.shipName.value = ''; els.shipMmsi.value = ''; els.shipImo.value = '';
+    els.shipWidgetWrap.style.display = 'none';
+    els.shipIframe.src = '';
+    await persistShipInfo();
   });
 
   // ---- accent colors ----
@@ -2039,6 +2120,7 @@
     ensurePdfDefaults();
     renderAll();
     checkNotifyReminder();
+    restoreShipInfo();
   })();
 })();
 </script>
