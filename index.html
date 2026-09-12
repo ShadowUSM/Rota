@@ -788,6 +788,10 @@
   <div class="card" style="margin-top:22px;">
     <div class="side-title">Udostępnij grafik</div>
     <div class="field-hint" style="margin-top:-6px;margin-bottom:14px;">Wygeneruj link (i kod QR) z Twoim aktualnym grafikiem — osoba, która go otworzy, będzie mogła zaimportować go jako nowy profil. Kod QR wymaga internetu.</div>
+    <div class="checkbox-row" style="margin-top:0; margin-bottom:14px;">
+      <input type="checkbox" id="shareIncludeShip" checked>
+      <label for="shareIncludeShip">Dołącz dane śledzonego statku do linku</label>
+    </div>
     <div class="share-row">
       <div class="share-link-box">
         <input type="text" id="shareLink" readonly>
@@ -990,6 +994,7 @@
     shareLink: document.getElementById('shareLink'),
     shareCopyBtn: document.getElementById('shareCopyBtn'),
     shareQr: document.getElementById('shareQr'),
+    shareIncludeShip: document.getElementById('shareIncludeShip'),
     dayModalOverlay: document.getElementById('dayModalOverlay'),
     dayModalClose: document.getElementById('dayModalClose'),
     dayModalDate: document.getElementById('dayModalDate'),
@@ -1994,6 +1999,12 @@
       workDays: state.workDays, homeDays: state.homeDays,
       toleranceOut: state.toleranceOut||0, toleranceIn: state.toleranceIn||0
     };
+    if (els.shareIncludeShip.checked){
+      const mmsi = els.shipMmsi.value.trim(), imo = els.shipImo.value.trim();
+      if (mmsi || imo){
+        payload.ship = { name: els.shipName.value.trim(), mmsi, imo };
+      }
+    }
     return btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
   }
   function decodeShareState(b64){
@@ -2006,6 +2017,7 @@
     els.shareQr.onload = ()=>{ els.shareQr.style.display = 'inline-block'; };
     els.shareQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
   }
+  els.shareIncludeShip.addEventListener('change', renderShareLink);
   els.shareCopyBtn.addEventListener('click', async ()=>{
     try{
       await navigator.clipboard.writeText(els.shareLink.value);
@@ -2022,13 +2034,26 @@
     const data = decodeShareState(s);
     history.replaceState(null, '', location.pathname);
     if (!data || !data.changeDate) return;
-    if (!confirm('Ten link zawiera udostępniony grafik. Zaimportować go jako nowy profil?')) return;
+    const hasShip = data.ship && (data.ship.mmsi || data.ship.imo);
+    const msg = hasShip
+      ? 'Ten link zawiera udostępniony grafik oraz dane śledzonego statku. Zaimportować je?'
+      : 'Ten link zawiera udostępniony grafik. Zaimportować go jako nowy profil?';
+    if (!confirm(msg)) return;
     const id = 'p'+Date.now();
     const name = prompt('Nazwa nowego profilu:', 'Zaimportowany grafik') || 'Zaimportowany grafik';
-    profiles.push({ id, name, data: Object.assign(defaultScheduleData(), data, {notes:{}}) });
+    const scheduleData = Object.assign({}, data);
+    delete scheduleData.ship;
+    profiles.push({ id, name, data: Object.assign(defaultScheduleData(), scheduleData, {notes:{}}) });
     activeProfileId = id;
     state = profiles[profiles.length-1].data;
     persistProfiles();
+    if (hasShip){
+      els.shipName.value = data.ship.name || '';
+      els.shipMmsi.value = data.ship.mmsi || '';
+      els.shipImo.value = data.ship.imo || '';
+      showShipWidget();
+      persistShipInfo();
+    }
   }
 
   // ---- notification reminder (day before a change, while app is open) ----
@@ -2115,12 +2140,12 @@
   (async function boot(){
     await restoreProfiles();
     await restoreUiPrefs();
+    await restoreShipInfo();
     checkImportFromUrl();
     syncFormFromState();
     ensurePdfDefaults();
     renderAll();
     checkNotifyReminder();
-    restoreShipInfo();
   })();
 })();
 </script>
