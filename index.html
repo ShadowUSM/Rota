@@ -788,10 +788,6 @@
   <div class="card" style="margin-top:22px;">
     <div class="side-title">Udostępnij grafik</div>
     <div class="field-hint" style="margin-top:-6px;margin-bottom:14px;">Wygeneruj link (i kod QR) z Twoim aktualnym grafikiem — osoba, która go otworzy, będzie mogła zaimportować go jako nowy profil. Kod QR wymaga internetu.</div>
-    <div class="checkbox-row" style="margin-top:0; margin-bottom:14px;">
-      <input type="checkbox" id="shareIncludeShip" checked>
-      <label for="shareIncludeShip">Dołącz dane śledzonego statku do linku</label>
-    </div>
     <div class="share-row">
       <div class="share-link-box">
         <input type="text" id="shareLink" readonly>
@@ -803,27 +799,10 @@
 
   <div class="card" style="margin-top:22px;">
     <div class="side-title">Śledzenie statku</div>
-    <div class="field-hint" style="margin-top:-6px;margin-bottom:14px;">Podaj MMSI (zalecane) lub IMO statku. Wymaga połączenia z internetem.</div>
-    <div class="field-row">
-      <div class="field"><label>Nazwa statku (opcjonalnie)</label><input type="text" id="shipName" placeholder="np. Stena Baltica"></div>
-      <div class="field"></div>
-      <div class="field"><label>MMSI</label><input type="text" id="shipMmsi" inputmode="numeric" placeholder="np. 265547680"></div>
-      <div class="field"><label>IMO</label><input type="text" id="shipImo" inputmode="numeric" placeholder="np. 9506291"></div>
-    </div>
+    <div class="field-hint" style="margin-top:-6px;margin-bottom:14px;">Aktualną pozycję statku sprawdzisz w zewnętrznej aplikacji do śledzenia AIS — otwiera się w nowej karcie.</div>
     <div class="setup-actions">
-      <button class="secondary" id="shipShowBtn" type="button">Pokaż statek</button>
-      <button class="mini-btn" id="shipClearBtn" type="button">Wyczyść</button>
-    </div>
-    <div id="shipWidgetWrap" style="display:none; margin-top:16px;">
-      <div id="shipWidgetTitle" style="font-weight:600; margin-bottom:10px;"></div>
-
-      <a id="shipOpenLink" href="#" target="_blank" rel="noopener" class="mini-btn" style="display:inline-flex; text-decoration:none; background:var(--dom-soft); border-color:var(--dom-line); color:var(--dom); font-weight:700;">Otwórz pozycję statku ↗</a>
-      <div class="field-hint" style="margin-top:6px;">Otwiera stronę <span id="shipWidgetSource">—</span> w nowej karcie — to zwykły link, więc działa zawsze.</div>
-
-      <details style="margin-top:16px;">
-        <summary style="cursor:pointer; font-size:12.5px; color:var(--text-dim);">Spróbuj też mapy wewnątrz aplikacji (czasem blokowana przez przeglądarkę)</summary>
-        <div id="shipWidgetContainer" style="min-height:340px; margin-top:10px; border:1px solid var(--border); border-radius:10px; overflow:hidden;"></div>
-      </details>
+      <a href="https://www.myshiptracking.com/" target="_blank" rel="noopener" class="mini-btn" style="text-decoration:none; display:inline-flex; align-items:center;">MyShipTracking ↗</a>
+      <a href="https://www.vesselfinder.com/" target="_blank" rel="noopener" class="mini-btn" style="text-decoration:none; display:inline-flex; align-items:center;">VesselFinder ↗</a>
     </div>
   </div>
 
@@ -1000,7 +979,6 @@
     shareLink: document.getElementById('shareLink'),
     shareCopyBtn: document.getElementById('shareCopyBtn'),
     shareQr: document.getElementById('shareQr'),
-    shareIncludeShip: document.getElementById('shareIncludeShip'),
     dayModalOverlay: document.getElementById('dayModalOverlay'),
     dayModalClose: document.getElementById('dayModalClose'),
     dayModalDate: document.getElementById('dayModalDate'),
@@ -1009,17 +987,7 @@
     dayModalHolidayName: document.getElementById('dayModalHolidayName'),
     dayModalNote: document.getElementById('dayModalNote'),
     dayModalSave: document.getElementById('dayModalSave'),
-    dayModalDelete: document.getElementById('dayModalDelete'),
-    shipName: document.getElementById('shipName'),
-    shipMmsi: document.getElementById('shipMmsi'),
-    shipImo: document.getElementById('shipImo'),
-    shipShowBtn: document.getElementById('shipShowBtn'),
-    shipClearBtn: document.getElementById('shipClearBtn'),
-    shipWidgetWrap: document.getElementById('shipWidgetWrap'),
-    shipWidgetTitle: document.getElementById('shipWidgetTitle'),
-    shipWidgetContainer: document.getElementById('shipWidgetContainer'),
-    shipWidgetSource: document.getElementById('shipWidgetSource'),
-    shipOpenLink: document.getElementById('shipOpenLink')
+    dayModalDelete: document.getElementById('dayModalDelete')
   };
 
   const today = toDateOnly(new Date());
@@ -1533,107 +1501,6 @@
     await persistProfiles();
   });
 
-  // ---- ship tracking (official embeddable widgets, not guessed iframe URLs) ----
-  function clearShipWidgetContainer(){
-    els.shipWidgetContainer.innerHTML = '';
-  }
-  // These provider widgets are old-style scripts that use document.write() to
-  // inject their map. That only works during a page's initial load — a script
-  // injected into an already-loaded page has document.write() silently blocked
-  // by the browser (empty box, no error). Fix: give each widget a brand-new
-  // nested document (via a blank iframe) so it gets a proper initial-load context.
-  function loadWidgetInIframe(bodyHtml){
-    clearShipWidgetContainer();
-    const iframe = document.createElement('iframe');
-    iframe.style.width = '100%';
-    iframe.style.height = '340px';
-    iframe.style.border = 'none';
-    iframe.title = 'Pozycja statku';
-    els.shipWidgetContainer.appendChild(iframe);
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;font-family:sans-serif;}</style></head><body>${bodyHtml}</body></html>`);
-    doc.close();
-  }
-  function loadMyShipTrackingWidget(mmsi){
-    loadWidgetInIframe(`
-      <script>
-        var mst_width="100%";
-        var mst_height="340px";
-        var mst_border="0";
-        var mst_map_style="simple";
-        var mst_mmsi="${mmsi}";
-        var mst_show_track="true";
-        var mst_show_info="true";
-        var mst_fleet="";
-        var mst_lat="";
-        var mst_lng="";
-        var mst_zoom="";
-        var mst_show_names="1";
-        var mst_scroll_wheel="0";
-        var mst_show_menu="0";
-      <\/script>
-      <script src="https://www.myshiptracking.com/js/widgetApi.js"><\/script>
-    `);
-    els.shipWidgetSource.textContent = 'MyShipTracking';
-    els.shipOpenLink.href = `https://www.myshiptracking.com/vessels?mmsi=${mmsi}`;
-  }
-  function loadVesselFinderWidget(imo){
-    loadWidgetInIframe(`
-      <script>
-        var width="100%";
-        var height="340";
-        var names=true;
-        var imo="${imo}";
-        var show_track=true;
-      <\/script>
-      <script src="https://www.vesselfinder.com/aismap.js"><\/script>
-    `);
-    els.shipWidgetSource.textContent = 'VesselFinder';
-    els.shipOpenLink.href = `https://www.vesselfinder.com/?imo=${imo}`;
-  }
-  function showShipWidget(){
-    const mmsi = els.shipMmsi.value.replace(/\D/g, '');
-    const imo = els.shipImo.value.replace(/\D/g, '');
-    if (!mmsi && !imo){ alert('Podaj MMSI lub IMO statku.'); return; }
-    els.shipWidgetTitle.textContent = els.shipName.value.trim() || 'Statek';
-    if (mmsi) loadMyShipTrackingWidget(mmsi);
-    else loadVesselFinderWidget(imo);
-    els.shipWidgetWrap.style.display = 'block';
-  }
-  async function persistShipInfo(){
-    const data = { name: els.shipName.value.trim(), mmsi: els.shipMmsi.value.trim(), imo: els.shipImo.value.trim() };
-    try{
-      if (window.storage && window.storage.set){
-        await window.storage.set('rota-ship', JSON.stringify(data));
-      }
-    }catch(e){ /* stays in-memory for this session */ }
-  }
-  async function restoreShipInfo(){
-    try{
-      if (window.storage && window.storage.get){
-        const res = await window.storage.get('rota-ship');
-        if (res && res.value){
-          const data = JSON.parse(res.value);
-          els.shipName.value = data.name || '';
-          els.shipMmsi.value = data.mmsi || '';
-          els.shipImo.value = data.imo || '';
-          if (data.mmsi || data.imo) showShipWidget();
-        }
-      }
-    }catch(e){ /* no saved ship yet */ }
-  }
-  els.shipShowBtn.addEventListener('click', async ()=>{
-    showShipWidget();
-    await persistShipInfo();
-  });
-  els.shipClearBtn.addEventListener('click', async ()=>{
-    els.shipName.value = ''; els.shipMmsi.value = ''; els.shipImo.value = '';
-    els.shipWidgetWrap.style.display = 'none';
-    clearShipWidgetContainer();
-    await persistShipInfo();
-  });
-
   // ---- accent colors ----
   function applyAccentColors(){
     const root = document.documentElement;
@@ -2055,12 +1922,6 @@
       workDays: state.workDays, homeDays: state.homeDays,
       toleranceOut: state.toleranceOut||0, toleranceIn: state.toleranceIn||0
     };
-    if (els.shareIncludeShip.checked){
-      const mmsi = els.shipMmsi.value.trim(), imo = els.shipImo.value.trim();
-      if (mmsi || imo){
-        payload.ship = { name: els.shipName.value.trim(), mmsi, imo };
-      }
-    }
     return btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
   }
   function decodeShareState(b64){
@@ -2073,7 +1934,6 @@
     els.shareQr.onload = ()=>{ els.shareQr.style.display = 'inline-block'; };
     els.shareQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
   }
-  els.shareIncludeShip.addEventListener('change', renderShareLink);
   els.shareCopyBtn.addEventListener('click', async ()=>{
     try{
       await navigator.clipboard.writeText(els.shareLink.value);
@@ -2090,26 +1950,13 @@
     const data = decodeShareState(s);
     history.replaceState(null, '', location.pathname);
     if (!data || !data.changeDate) return;
-    const hasShip = data.ship && (data.ship.mmsi || data.ship.imo);
-    const msg = hasShip
-      ? 'Ten link zawiera udostępniony grafik oraz dane śledzonego statku. Zaimportować je?'
-      : 'Ten link zawiera udostępniony grafik. Zaimportować go jako nowy profil?';
-    if (!confirm(msg)) return;
+    if (!confirm('Ten link zawiera udostępniony grafik. Zaimportować go jako nowy profil?')) return;
     const id = 'p'+Date.now();
     const name = prompt('Nazwa nowego profilu:', 'Zaimportowany grafik') || 'Zaimportowany grafik';
-    const scheduleData = Object.assign({}, data);
-    delete scheduleData.ship;
-    profiles.push({ id, name, data: Object.assign(defaultScheduleData(), scheduleData, {notes:{}}) });
+    profiles.push({ id, name, data: Object.assign(defaultScheduleData(), data, {notes:{}}) });
     activeProfileId = id;
     state = profiles[profiles.length-1].data;
     persistProfiles();
-    if (hasShip){
-      els.shipName.value = data.ship.name || '';
-      els.shipMmsi.value = data.ship.mmsi || '';
-      els.shipImo.value = data.ship.imo || '';
-      showShipWidget();
-      persistShipInfo();
-    }
   }
 
   // ---- notification reminder (day before a change, while app is open) ----
@@ -2196,7 +2043,6 @@
   (async function boot(){
     await restoreProfiles();
     await restoreUiPrefs();
-    await restoreShipInfo();
     checkImportFromUrl();
     syncFormFromState();
     ensurePdfDefaults();
