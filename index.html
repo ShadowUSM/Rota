@@ -803,7 +803,7 @@
 
   <div class="card" style="margin-top:22px;">
     <div class="side-title">Śledzenie statku</div>
-    <div class="field-hint" style="margin-top:-6px;margin-bottom:14px;">Podaj MMSI lub IMO statku, aby zobaczyć jego aktualną pozycję (dane na żywo z VesselFinder). Wymaga połączenia z internetem.</div>
+    <div class="field-hint" style="margin-top:-6px;margin-bottom:14px;">Podaj MMSI (zalecane, mapa z MyShipTracking) lub samo IMO (mapa z VesselFinder), aby zobaczyć aktualną pozycję statku. Wymaga połączenia z internetem.</div>
     <div class="field-row">
       <div class="field"><label>Nazwa statku (opcjonalnie)</label><input type="text" id="shipName" placeholder="np. Stena Baltica"></div>
       <div class="field"></div>
@@ -816,8 +816,8 @@
     </div>
     <div id="shipWidgetWrap" style="display:none; margin-top:16px;">
       <div id="shipWidgetTitle" style="font-weight:600; margin-bottom:8px;"></div>
-      <iframe id="shipIframe" title="Pozycja statku" style="width:100%; height:340px; border:1px solid var(--border); border-radius:10px;" loading="lazy"></iframe>
-      <div class="field-hint" style="margin-top:8px;">Źródło: <a href="https://www.vesselfinder.com" target="_blank" rel="noopener">VesselFinder</a></div>
+      <div id="shipWidgetContainer" style="min-height:340px; border:1px solid var(--border); border-radius:10px; overflow:hidden;"></div>
+      <div class="field-hint" style="margin-top:8px;">Źródło: <span id="shipWidgetSource">—</span>. Jeśli mapa się nie wczyta, otwórz ją bezpośrednio: <a id="shipWidgetFallbackLink" href="#" target="_blank" rel="noopener">link</a>.</div>
     </div>
   </div>
 
@@ -1011,7 +1011,9 @@
     shipClearBtn: document.getElementById('shipClearBtn'),
     shipWidgetWrap: document.getElementById('shipWidgetWrap'),
     shipWidgetTitle: document.getElementById('shipWidgetTitle'),
-    shipIframe: document.getElementById('shipIframe')
+    shipWidgetContainer: document.getElementById('shipWidgetContainer'),
+    shipWidgetSource: document.getElementById('shipWidgetSource'),
+    shipWidgetFallbackLink: document.getElementById('shipWidgetFallbackLink')
   };
 
   const today = toDateOnly(new Date());
@@ -1525,24 +1527,61 @@
     await persistProfiles();
   });
 
-  // ---- ship tracking (VesselFinder embed) ----
-  function buildVesselFinderUrl(mmsi, imo){
-    const params = new URLSearchParams();
-    params.set('width', '100%');
-    params.set('height', '340');
-    params.set('zoom', '7');
-    params.set('names', 'true');
-    params.set('track', 'true');
-    if (imo) params.set('imo', imo);
-    else if (mmsi) params.set('mmsi', mmsi);
-    return `https://www.vesselfinder.com/aismap?${params.toString()}`;
+  // ---- ship tracking (official embeddable widgets, not guessed iframe URLs) ----
+  function clearShipWidgetContainer(){
+    els.shipWidgetContainer.innerHTML = '';
+  }
+  function loadMyShipTrackingWidget(mmsi){
+    clearShipWidgetContainer();
+    const cfg = document.createElement('script');
+    cfg.text = `
+      var mst_width="100%";
+      var mst_height="340px";
+      var mst_border="0";
+      var mst_map_style="simple";
+      var mst_mmsi="${mmsi}";
+      var mst_show_track="true";
+      var mst_show_info="true";
+      var mst_fleet="";
+      var mst_lat="";
+      var mst_lng="";
+      var mst_zoom="";
+      var mst_show_names="1";
+      var mst_scroll_wheel="0";
+      var mst_show_menu="0";
+    `;
+    const loader = document.createElement('script');
+    loader.src = `https://www.myshiptracking.com/js/widgetApi.js?_=${Date.now()}`;
+    loader.async = true;
+    els.shipWidgetContainer.appendChild(cfg);
+    els.shipWidgetContainer.appendChild(loader);
+    els.shipWidgetSource.textContent = 'MyShipTracking';
+    els.shipWidgetFallbackLink.href = `https://www.myshiptracking.com/vessels?mmsi=${mmsi}`;
+  }
+  function loadVesselFinderWidget(imo){
+    clearShipWidgetContainer();
+    const cfg = document.createElement('script');
+    cfg.text = `
+      var width="100%";
+      var height="340";
+      var names=true;
+      var imo="${imo}";
+      var show_track=true;
+    `;
+    const loader = document.createElement('script');
+    loader.src = `https://www.vesselfinder.com/aismap.js?_=${Date.now()}`;
+    els.shipWidgetContainer.appendChild(cfg);
+    els.shipWidgetContainer.appendChild(loader);
+    els.shipWidgetSource.textContent = 'VesselFinder';
+    els.shipWidgetFallbackLink.href = `https://www.vesselfinder.com/?imo=${imo}`;
   }
   function showShipWidget(){
-    const mmsi = els.shipMmsi.value.trim();
-    const imo = els.shipImo.value.trim();
+    const mmsi = els.shipMmsi.value.replace(/\D/g, '');
+    const imo = els.shipImo.value.replace(/\D/g, '');
     if (!mmsi && !imo){ alert('Podaj MMSI lub IMO statku.'); return; }
     els.shipWidgetTitle.textContent = els.shipName.value.trim() || 'Statek';
-    els.shipIframe.src = buildVesselFinderUrl(mmsi, imo);
+    if (mmsi) loadMyShipTrackingWidget(mmsi);
+    else loadVesselFinderWidget(imo);
     els.shipWidgetWrap.style.display = 'block';
   }
   async function persistShipInfo(){
@@ -1574,7 +1613,7 @@
   els.shipClearBtn.addEventListener('click', async ()=>{
     els.shipName.value = ''; els.shipMmsi.value = ''; els.shipImo.value = '';
     els.shipWidgetWrap.style.display = 'none';
-    els.shipIframe.src = '';
+    clearShipWidgetContainer();
     await persistShipInfo();
   });
 
