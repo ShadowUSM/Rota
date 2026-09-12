@@ -1744,13 +1744,16 @@
     if (rangeEnd < rangeStart){ const t = rangeStart; rangeStart = rangeEnd; rangeEnd = t; }
     const pad = n => String(n).padStart(2,'0');
     const icsDate = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
-    const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ROTA//PL','CALSCALE:GREGORIAN'];
+    const now = new Date();
+    const dtstamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
+    const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ROTA//Grafik 4x4//PL','CALSCALE:GREGORIAN'];
     let cursor = rangeStart, idx = 0;
     while (cursor <= rangeEnd){
       const info = periodInfo(cursor);
       const segEnd = info.end > rangeEnd ? rangeEnd : info.end;
       lines.push('BEGIN:VEVENT');
       lines.push(`UID:rota-${icsDate(cursor)}-${idx++}@rota.local`);
+      lines.push(`DTSTAMP:${dtstamp}`);
       lines.push(`DTSTART;VALUE=DATE:${icsDate(cursor)}`);
       lines.push(`DTEND;VALUE=DATE:${icsDate(addDays(segEnd,1))}`);
       lines.push(`SUMMARY:${info.s === 'praca' ? 'W pracy' : 'W domu'} (ROTA)`);
@@ -1758,7 +1761,7 @@
       cursor = addDays(segEnd, 1);
     }
     lines.push('END:VCALENDAR');
-    const blob = new Blob([lines.join('\r\n')], { type:'text/calendar;charset=utf-8' });
+    const blob = new Blob([lines.join('\r\n') + '\r\n'], { type:'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = `rota-grafik-${fmt(rangeStart)}_${fmt(rangeEnd)}.ics`;
