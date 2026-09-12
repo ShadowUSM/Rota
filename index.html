@@ -1531,47 +1531,58 @@
   function clearShipWidgetContainer(){
     els.shipWidgetContainer.innerHTML = '';
   }
-  function loadMyShipTrackingWidget(mmsi){
+  // These provider widgets are old-style scripts that use document.write() to
+  // inject their map. That only works during a page's initial load — a script
+  // injected into an already-loaded page has document.write() silently blocked
+  // by the browser (empty box, no error). Fix: give each widget a brand-new
+  // nested document (via a blank iframe) so it gets a proper initial-load context.
+  function loadWidgetInIframe(bodyHtml){
     clearShipWidgetContainer();
-    const cfg = document.createElement('script');
-    cfg.text = `
-      var mst_width="100%";
-      var mst_height="340px";
-      var mst_border="0";
-      var mst_map_style="simple";
-      var mst_mmsi="${mmsi}";
-      var mst_show_track="true";
-      var mst_show_info="true";
-      var mst_fleet="";
-      var mst_lat="";
-      var mst_lng="";
-      var mst_zoom="";
-      var mst_show_names="1";
-      var mst_scroll_wheel="0";
-      var mst_show_menu="0";
-    `;
-    const loader = document.createElement('script');
-    loader.src = `https://www.myshiptracking.com/js/widgetApi.js?_=${Date.now()}`;
-    loader.async = true;
-    els.shipWidgetContainer.appendChild(cfg);
-    els.shipWidgetContainer.appendChild(loader);
+    const iframe = document.createElement('iframe');
+    iframe.style.width = '100%';
+    iframe.style.height = '340px';
+    iframe.style.border = 'none';
+    iframe.title = 'Pozycja statku';
+    els.shipWidgetContainer.appendChild(iframe);
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:0;font-family:sans-serif;}</style></head><body>${bodyHtml}</body></html>`);
+    doc.close();
+  }
+  function loadMyShipTrackingWidget(mmsi){
+    loadWidgetInIframe(`
+      <script>
+        var mst_width="100%";
+        var mst_height="340px";
+        var mst_border="0";
+        var mst_map_style="simple";
+        var mst_mmsi="${mmsi}";
+        var mst_show_track="true";
+        var mst_show_info="true";
+        var mst_fleet="";
+        var mst_lat="";
+        var mst_lng="";
+        var mst_zoom="";
+        var mst_show_names="1";
+        var mst_scroll_wheel="0";
+        var mst_show_menu="0";
+      <\/script>
+      <script src="https://www.myshiptracking.com/js/widgetApi.js"><\/script>
+    `);
     els.shipWidgetSource.textContent = 'MyShipTracking';
     els.shipWidgetFallbackLink.href = `https://www.myshiptracking.com/vessels?mmsi=${mmsi}`;
   }
   function loadVesselFinderWidget(imo){
-    clearShipWidgetContainer();
-    const cfg = document.createElement('script');
-    cfg.text = `
-      var width="100%";
-      var height="340";
-      var names=true;
-      var imo="${imo}";
-      var show_track=true;
-    `;
-    const loader = document.createElement('script');
-    loader.src = `https://www.vesselfinder.com/aismap.js?_=${Date.now()}`;
-    els.shipWidgetContainer.appendChild(cfg);
-    els.shipWidgetContainer.appendChild(loader);
+    loadWidgetInIframe(`
+      <script>
+        var width="100%";
+        var height="340";
+        var names=true;
+        var imo="${imo}";
+        var show_track=true;
+      <\/script>
+      <script src="https://www.vesselfinder.com/aismap.js"><\/script>
+    `);
     els.shipWidgetSource.textContent = 'VesselFinder';
     els.shipWidgetFallbackLink.href = `https://www.vesselfinder.com/?imo=${imo}`;
   }
