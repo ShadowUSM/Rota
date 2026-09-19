@@ -250,6 +250,9 @@
   details.setup > summary::-webkit-details-marker{ display:none; }
   .chev{ transition:transform .25s ease; color:var(--text-dim); }
   details.setup[open] .chev{ transform:rotate(180deg); }
+  #upcomingPanel > summary{ list-style:none; }
+  #upcomingPanel > summary::-webkit-details-marker{ display:none; }
+  #upcomingPanel[open] .chev{ transform:rotate(180deg); }
 
   .setup-body{
     padding:4px 24px 24px;
@@ -536,6 +539,41 @@
   .planner-result.mixed{ background:var(--unsure-soft); border:1px solid var(--unsure-line); display:block; }
 
   .share-row{ display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; }
+
+  .tab-bar{
+    display:flex; gap:8px; margin-bottom:18px;
+    border-bottom:1px solid var(--border);
+  }
+  .tab-bar button{
+    padding:10px 4px; margin-bottom:-1px;
+    background:none; border:none; border-bottom:2px solid transparent;
+    color:var(--text-dim); font-family:'Inter',sans-serif; font-size:14px; font-weight:600;
+    cursor:pointer;
+  }
+  .tab-bar button.active{ color:var(--dom); border-bottom-color:var(--dom); }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+
+  .stats-year-nav{ display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+  .stats-year-nav button{
+    width:32px; height:32px; border-radius:8px; border:1px solid var(--border);
+    background:var(--surface-alt); color:var(--text); cursor:pointer; font-size:15px;
+  }
+  .stats-year-nav b{ font-family:'IBM Plex Mono',monospace; font-size:15px; }
+
+  .chart-card{ margin-top:22px; }
+  .chart-row{ display:flex; gap:24px; flex-wrap:wrap; align-items:center; }
+  .donut-box{ position:relative; width:150px; height:150px; flex-shrink:0; }
+  .donut-box svg{ width:100%; height:100%; transform:rotate(-90deg); }
+  .donut-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .donut-center b{ font-family:'IBM Plex Mono',monospace; font-size:20px; }
+  .donut-center span{ font-size:10.5px; color:var(--text-dim); }
+  .donut-legend{ display:flex; flex-direction:column; gap:10px; font-size:13px; }
+  .donut-legend div{ display:flex; align-items:center; gap:8px; }
+  .donut-legend i{ width:11px; height:11px; border-radius:3px; display:inline-block; flex-shrink:0; }
+  .bar-chart-wrap{ margin-top:10px; }
+  .bar-chart-wrap svg{ width:100%; height:auto; display:block; }
+
   .share-link-box{ flex:1; min-width:180px; display:flex; gap:8px; }
   .share-link-box input{ flex:1; }
   #shareQr{ width:120px; height:120px; border-radius:10px; border:1px solid var(--border); background:var(--surface-alt); }
@@ -625,7 +663,14 @@
     </div>
   </section>
 
-  <details class="setup" id="setupPanel" open>
+  <div class="tab-bar" id="tabBar">
+    <button type="button" class="active" data-tab="calendar">Kalendarz</button>
+    <button type="button" data-tab="stats">Statystyki</button>
+  </div>
+
+  <div id="tabCalendar" class="tab-panel active">
+
+  <details class="setup" id="setupPanel">
     <summary>
       <span>Ustawienia grafiku</span>
       <svg class="chev" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#8791A3" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -740,18 +785,13 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="side-title">Nadchodzące okresy</div>
-      <div class="upcoming" id="upcomingList"></div>
-    </div>
-  </div>
-
-  <div class="card" style="margin-top:22px;">
-    <div class="side-title">Statystyki <span id="statsYear"></span></div>
-    <div class="stat-row">
-      <div class="stat-box praca"><b id="statPraca">–</b><span>dni w pracy</span></div>
-      <div class="stat-box dom"><b id="statDom">–</b><span>dni w domu</span></div>
-    </div>
+    <details class="card" id="upcomingPanel" style="padding:0;">
+      <summary style="padding:18px 24px; cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;">
+        <span class="side-title" style="margin-bottom:0;">Nadchodzące okresy</span>
+        <svg class="chev" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="#8791A3" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </summary>
+      <div class="upcoming" id="upcomingList" style="padding:0 24px 20px;"></div>
+    </details>
   </div>
 
   <div class="card" style="margin-top:22px;">
@@ -804,6 +844,56 @@
       <a href="https://www.myshiptracking.com/" target="_blank" rel="noopener" class="mini-btn" style="text-decoration:none; display:inline-flex; align-items:center;">MyShipTracking ↗</a>
       <a href="https://www.vesselfinder.com/" target="_blank" rel="noopener" class="mini-btn" style="text-decoration:none; display:inline-flex; align-items:center;">VesselFinder ↗</a>
     </div>
+  </div>
+
+  </div>
+
+  <div id="tabStats" class="tab-panel">
+
+    <div class="stats-year-nav">
+      <button type="button" id="statsPrevYear" aria-label="Poprzedni rok">‹</button>
+      <b id="statsYearLabel">—</b>
+      <button type="button" id="statsNextYear" aria-label="Następny rok">›</button>
+      <button type="button" id="statsThisYear" class="mini-btn" style="margin-left:6px;">Dziś</button>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-box praca"><b id="statPraca">–</b><span>dni w pracy</span></div>
+      <div class="stat-box dom"><b id="statDom">–</b><span>dni w domu</span></div>
+      <div class="stat-box"><b id="statChanges">–</b><span>zmian w roku</span></div>
+      <div class="stat-box"><b id="statHolidaysWork">–</b><span>świąt w trakcie pracy</span></div>
+    </div>
+
+    <div class="card chart-card">
+      <div class="side-title">Podział roku</div>
+      <div class="chart-row">
+        <div class="donut-box">
+          <svg viewBox="0 0 150 150">
+            <circle class="ring-bg" cx="75" cy="75" r="62"/>
+            <circle id="statsDonutPraca" class="ring-fg" cx="75" cy="75" r="62" style="stroke:var(--praca);"/>
+            <circle id="statsDonutDom" class="ring-fg" cx="75" cy="75" r="62" style="stroke:var(--dom);"/>
+          </svg>
+          <div class="donut-center">
+            <b id="statsDonutPct">–%</b>
+            <span>w pracy</span>
+          </div>
+        </div>
+        <div class="donut-legend">
+          <div><i style="background:var(--praca)"></i><span id="statsLegendPraca">W pracy: –</span></div>
+          <div><i style="background:var(--dom)"></i><span id="statsLegendDom">W domu: –</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card chart-card">
+      <div class="side-title">Dni w pracy / w domu wg miesiąca</div>
+      <div class="bar-chart-wrap" id="barChartWrap"></div>
+      <div class="legend" style="margin-top:14px;">
+        <div><i style="background:var(--praca)"></i>W pracy</div>
+        <div><i style="background:var(--dom)"></i>W domu</div>
+      </div>
+    </div>
+
   </div>
 
   <div class="modal-overlay" id="dayModalOverlay">
@@ -987,7 +1077,19 @@
     dayModalHolidayName: document.getElementById('dayModalHolidayName'),
     dayModalNote: document.getElementById('dayModalNote'),
     dayModalSave: document.getElementById('dayModalSave'),
-    dayModalDelete: document.getElementById('dayModalDelete')
+    dayModalDelete: document.getElementById('dayModalDelete'),
+    tabBar: document.getElementById('tabBar'),
+    tabCalendar: document.getElementById('tabCalendar'),
+    tabStats: document.getElementById('tabStats'),
+    statsPrevYear: document.getElementById('statsPrevYear'),
+    statsNextYear: document.getElementById('statsNextYear'),
+    statsThisYear: document.getElementById('statsThisYear'),
+    statsYearLabel: document.getElementById('statsYearLabel'),
+    statChanges: document.getElementById('statChanges'),
+    statHolidaysWork: document.getElementById('statHolidaysWork'),
+    statsLegendPraca: document.getElementById('statsLegendPraca'),
+    statsLegendDom: document.getElementById('statsLegendDom'),
+    barChartWrap: document.getElementById('barChartWrap')
   };
 
   const today = toDateOnly(new Date());
@@ -1205,11 +1307,14 @@
     return map;
   }
   const holidayCache = {};
-  function holidayName(d){
-    if (!uiPrefs.showHolidays) return null;
+  function holidayNameRaw(d){
     const y = d.getFullYear();
     if (!holidayCache[y]) holidayCache[y] = holidayMapForYear(y);
     return holidayCache[y][fmt(d)] || null;
+  }
+  function holidayName(d){
+    if (!uiPrefs.showHolidays) return null;
+    return holidayNameRaw(d);
   }
 
   // ---- render hero ----
@@ -1317,15 +1422,76 @@
     }
   }
 
-  function renderStats(){
-    els.statsYear.textContent = `(${viewYear})`;
-    let pracaDays = 0, domDays = 0;
-    const jan1 = new Date(viewYear,0,1), dec31 = new Date(viewYear,11,31);
+  let statsYear = today.getFullYear();
+
+  function computeYearStats(year){
+    let pracaDays = 0, domDays = 0, holidaysWork = 0;
+    const jan1 = new Date(year,0,1), dec31 = new Date(year,11,31);
     for (let d = jan1; d <= dec31; d = addDays(d,1)){
-      if (periodInfo(d).s === 'praca') pracaDays++; else domDays++;
+      const info = periodInfo(d);
+      if (info.s === 'praca'){ pracaDays++; if (holidayNameRaw(d)) holidaysWork++; }
+      else domDays++;
     }
-    els.statPraca.textContent = pracaDays;
-    els.statDom.textContent = domDays;
+    let changes = 0;
+    let cursor = jan1;
+    while (cursor <= dec31){
+      const info = periodInfo(cursor);
+      if (toDateOnly(info.start) >= jan1) changes++;
+      cursor = addDays(info.end, 1);
+    }
+    return { pracaDays, domDays, changes, holidaysWork };
+  }
+
+  function renderDonut(pracaDays, domDays){
+    const total = pracaDays + domDays || 1;
+    const R = 62, C = 2*Math.PI*R;
+    const pracaFrac = pracaDays/total;
+    const pracaLen = C*pracaFrac, domLen = C*(1-pracaFrac);
+    const pracaEl = document.getElementById('statsDonutPraca');
+    const domEl = document.getElementById('statsDonutDom');
+    pracaEl.setAttribute('stroke-dasharray', `${pracaLen} ${C-pracaLen}`);
+    pracaEl.setAttribute('stroke-dashoffset', '0');
+    domEl.setAttribute('stroke-dasharray', `${domLen} ${C-domLen}`);
+    domEl.setAttribute('stroke-dashoffset', String(-pracaLen));
+    document.getElementById('statsDonutPct').textContent = `${Math.round(pracaFrac*100)}%`;
+    els.statsLegendPraca.textContent = `W pracy: ${pracaDays} dni (${Math.round(pracaFrac*100)}%)`;
+    els.statsLegendDom.textContent = `W domu: ${domDays} dni (${Math.round((1-pracaFrac)*100)}%)`;
+  }
+
+  function renderBarChart(year){
+    const monthAbbr = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+    const W = 360, baseline = 128, maxH = 100, barW = 20;
+    const gap = (W - 12*barW) / 13;
+    let svg = `<svg viewBox="0 0 ${W} 150" xmlns="http://www.w3.org/2000/svg">`;
+    for (let m=0; m<12; m++){
+      const daysInMonth = new Date(year, m+1, 0).getDate();
+      let praca = 0;
+      for (let d=1; d<=daysInMonth; d++){
+        if (periodInfo(new Date(year, m, d)).s === 'praca') praca++;
+      }
+      const dom = daysInMonth - praca;
+      const scale = maxH/31;
+      const pracaH = praca*scale, domH = dom*scale;
+      const x = gap + m*(barW+gap);
+      const pracaY = baseline - pracaH;
+      const domY = pracaY - domH;
+      svg += `<rect x="${x.toFixed(1)}" y="${pracaY.toFixed(1)}" width="${barW}" height="${pracaH.toFixed(1)}" rx="1.5" style="fill:var(--praca)"><title>${monthAbbr[m]}: ${praca} dni w pracy</title></rect>`;
+      svg += `<rect x="${x.toFixed(1)}" y="${domY.toFixed(1)}" width="${barW}" height="${domH.toFixed(1)}" rx="1.5" style="fill:var(--dom)"><title>${monthAbbr[m]}: ${dom} dni w domu</title></rect>`;
+      svg += `<text x="${(x+barW/2).toFixed(1)}" y="${baseline+14}" text-anchor="middle" font-size="9" style="fill:var(--text-dim); font-family:Inter,sans-serif;">${monthAbbr[m]}</text>`;
+    }
+    svg += `</svg>`;
+    els.barChartWrap.innerHTML = svg;
+  }
+
+  function renderStatsTab(){
+    els.statsYearLabel.textContent = statsYear;
+    const s = computeYearStats(statsYear);
+    els.statPraca.textContent = s.pracaDays;
+    els.statDom.textContent = s.domDays;
+    els.statChanges.textContent = s.changes;
+    els.statHolidaysWork.textContent = s.holidaysWork;
+    renderDonut(s.pracaDays, s.domDays);
+    renderBarChart(statsYear);
   }
 
   function renderUpcoming(){
@@ -1355,7 +1521,7 @@
   function renderAll(){
     renderHero();
     if (currentView === 'year'){ renderYear(); } else { renderCalendar(); }
-    renderStats();
+    renderStatsTab();
     renderUpcoming();
     renderShareLink();
   }
@@ -1395,6 +1561,20 @@
     if (currentView === 'year') renderYear(); else renderCalendar();
   });
 
+  els.tabBar.addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    const tab = btn.dataset.tab;
+    [...els.tabBar.children].forEach(b=>b.classList.toggle('active', b===btn));
+    els.tabCalendar.classList.toggle('active', tab === 'calendar');
+    els.tabStats.classList.toggle('active', tab === 'stats');
+    if (tab === 'stats') renderStatsTab();
+  });
+
+  els.statsPrevYear.addEventListener('click', ()=>{ statsYear--; renderStatsTab(); });
+  els.statsNextYear.addEventListener('click', ()=>{ statsYear++; renderStatsTab(); });
+  els.statsThisYear.addEventListener('click', ()=>{ statsYear = today.getFullYear(); renderStatsTab(); });
+
   els.saveBtn.addEventListener('click', async ()=>{
     const activeBtn = els.stateSeg.querySelector('button.active');
     state.currentState = activeBtn ? activeBtn.dataset.v : 'praca';
@@ -1425,18 +1605,18 @@
   });
 
   els.prevBtn.addEventListener('click', ()=>{
-    if (currentView === 'year'){ viewYear--; renderYear(); renderStats(); return; }
+    if (currentView === 'year'){ viewYear--; renderYear(); return; }
     viewMonth--; if (viewMonth<0){ viewMonth=11; viewYear--; }
     renderCalendar();
   });
   els.nextBtn.addEventListener('click', ()=>{
-    if (currentView === 'year'){ viewYear++; renderYear(); renderStats(); return; }
+    if (currentView === 'year'){ viewYear++; renderYear(); return; }
     viewMonth++; if (viewMonth>11){ viewMonth=0; viewYear++; }
     renderCalendar();
   });
   els.todayBtn.addEventListener('click', ()=>{
     viewMonth = today.getMonth(); viewYear = today.getFullYear();
-    if (currentView === 'year'){ renderYear(); renderStats(); } else { renderCalendar(); }
+    if (currentView === 'year'){ renderYear(); } else { renderCalendar(); }
   });
 
   // ---- day detail modal (holiday info + note editor) ----
@@ -1860,7 +2040,7 @@
     if (!els.jumpDate.value) return;
     const d = toDateOnly(new Date(els.jumpDate.value + 'T00:00:00'));
     viewMonth = d.getMonth(); viewYear = d.getFullYear();
-    if (currentView === 'year'){ renderYear(); renderStats(); } else { renderCalendar(); }
+    if (currentView === 'year'){ renderYear(); } else { renderCalendar(); }
   });
 
   // ---- profiles ----
