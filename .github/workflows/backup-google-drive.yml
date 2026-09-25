@@ -1,0 +1,114 @@
+name: Backup to Google Drive
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: google-drive-backup-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Pobierz repozytorium
+        uses: actions/checkout@v4
+
+      - name: Przygotuj archiwum
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REPO="${GITHUB_REPOSITORY#*/}"
+          STAMP=$(TZ=Europe/Warsaw date +"%Y-%m-%d_%H-%M-%S")
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+
+          mkdir -p /tmp/app-current
+
+          rsync -a \
+            --exclude='.git' \
+            ./ /tmp/app-current/
+
+          cat > /tmp/app-current/BACKUP_INFO.txt <<EOF
+          Repozytorium: $GITHUB_REPOSITORY
+          Commit: $GITHUB_SHA
+          Data backupu: $STAMP
+          Źródło: GitHub Actions
+          EOF
+
+          cd /tmp/app-current
+          zip -qr /tmp/backup.zip .
+
+          echo "BACKUP_REPO=$REPO" >> "$GITHUB_ENV"
+          echo "BACKUP_STAMP=$STAMP" >> "$GITHUB_ENV"
+
+      - name: Zbuduj żądanie do Google Apps Script
+        env:
+          BACKUP_SECRET: ${{ secrets.BACKUP_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import base64
+          import json
+          import os
+
+          with open("/tmp/backup.zip", "rb") as f:
+              archive = base64.b64encode(f.read()).decode("ascii")
+
+          payload = {
+              "secret": os.environ["BACKUP_SECRET"],
+              "repo": os.environ["BACKUP_REPO"],
+              "commit": os.environ["GITHUB_SHA"],
+              "timestamp": os.environ["BACKUP_STAMP"],
+              "archiveBase64": archive
+          }
+
+          with open("/tmp/payload.json", "w", encoding="utf-8") as f:
+              json.dump(payload, f, separators=(",", ":"))
+          PY
+
+      - name: Wyślij backup na Google Drive
+        env:
+          BACKUP_URL: ${{ secrets.BACKUP_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          curl \
+            --silent \
+            --show-error \
+            --fail \
+            --location \
+            --header "Content-Type: application/json" \
+            --data-binary @/tmp/payload.json \
+            "$BACKUP_URL" \
+            --output /tmp/response.json
+
+          cat /tmp/response.json
+
+          python3 - <<'PY'
+          import json
+
+          with open("/tmp/response.json", encoding="utf-8") as f:
+              response = json.load(f)
+
+          if response.get("status") != "ok":
+              raise SystemExit(
+                  "Backup zakończył się błędem: " +
+                  str(response.get("message", response))
+              )
+
+          print("\nBackup zapisany poprawnie.")
+          print("Repozytorium:", response.get("repo"))
+          print("Archiwum:", response.get("archive"))
+          print("Liczba plików:", response.get("files"))
+          PY
