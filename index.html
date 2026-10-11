@@ -2335,14 +2335,15 @@ function roleDialog(){
 function hasWorkerData(){try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&/^rota-v2/.test(k)&&!/-cloud-base|-recovery/.test(k))return true;}}catch(e){}return false;}
 async function boot(){
   let role=LS.get('rota-role','');
-  if(!role){
-    if(hasWorkerData()){role='worker';LS.set('rota-role',role);}
+  // „ask” = użytkownik świadomie wrócił do wyboru trybu: pokazujemy wybór nawet, gdy są już dane pracownika
+  if(role==='ask'||!role){
+    if(!role&&hasWorkerData()){role='worker';LS.set('rota-role',role);}
     else{role=await roleDialog();LS.set('rota-role',role);}
   }
   if(role==='family'){mountFamily();return new Promise(()=>{});}
   document.documentElement.dataset.rotaRole='worker';
 }
-function changeRole(){LS.set('rota-role','');location.reload();}
+function changeRole(){LS.set('rota-role','ask');location.reload();}
 
 /* ------------------------------------------------------------------ pracownik: zaproszenia, lokalizacja, publikowanie */
 const uidNow=async()=>{try{const h=await fb();return h.auth.currentUser?.uid||null;}catch(e){return null;}};
@@ -2466,6 +2467,8 @@ async function renderWeather(main){
 /* ------------------------------------------------------------------ podłączenie do aplikacji pracownika */
 function attach(api){
   A=api;mountChip();
+  // przycisk w menu profilu: powrót do wyboru trybu (Pracownik / Członek rodziny)
+  if(!$('#plusRoleSwitch')){const menu=$('#profileMenu'),out=$('#menuLogout');if(menu){const b=document.createElement('button');b.id='plusRoleSwitch';b.type='button';b.textContent=tr('Zmień tryb (Pracownik / Członek rodziny)','Change mode (Worker / Family member)','Bytt modus (Arbeidstaker / Familiemedlem)');b.setAttribute('data-user-content','');b.onclick=()=>changeRole();menu.insertBefore(b,out||null);}}
   refreshWeather();setInterval(()=>refreshWeather(),30*60e3);
   setTimeout(()=>publishAll(),4000);setInterval(()=>publishAll(),60e3);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){publishAll();}});
