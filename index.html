@@ -2511,8 +2511,19 @@ ${f('shipImo','IMO',s.imo,'maxlength="20"')}${f('shipOwner',tr('Armator','Owner 
 <p id="shipMsg" class="hint" role="status"></p>
 <div class="row"><button class="primary" type="submit">${tr('Zapisz','Save','Lagre')}</button><button type="button" class="danger" id="shipClear">${tr('Usuń dane statku','Clear ship data','Fjern skipsdata')}</button></div></form></section>`;
 }
+/* „O aplikacji”: twórca, agent AI i wersja. Wersja HTML podąża za wersją Androida – aktualizuj przy każdej zmianie. */
+const APP_VERSION='2.0 (odpowiada wersji Android 1.18.0)';
+const APP_CREATOR='Bartek Muchowski';
+const APP_AI='Claude Code (Anthropic) – model Claude Sonnet 5.5';
+function aboutHTML(){
+  const r=(k,v)=>`<div style="margin-bottom:8px"><div class="hint" style="margin:0">${k}</div><b>${esc(v)}</b></div>`;
+  return `<section class="card" id="plusAbout"><h2>${tr('O aplikacji','About','Om appen')}</h2>
+${r(tr('Aplikacja','App','App'),'ROTA')}${r(tr('Wersja','Version','Versjon'),APP_VERSION)}${r(tr('Twórca','Creator','Skaper'),APP_CREATOR)}${r(tr('Kod napisał agent AI','Code written by AI agent','Koden er skrevet av AI-agent'),APP_AI)}${r(tr('Dane i mapy','Data and maps','Data og kart'),'Open-Meteo, Esri, OpenStreetMap, Natural Earth')}</section>`;
+}
 function decorateSettings(main){
+  main.querySelectorAll('#plusAbout').forEach(e=>e.parentElement&&e.parentElement.remove());
   const box=document.createElement('div');box.setAttribute('data-user-content','');box.style.marginTop='16px';box.innerHTML=shipSettingsHTML();main.append(box);
+  const about=document.createElement('div');about.setAttribute('data-user-content','');about.style.marginTop='16px';about.innerHTML=aboutHTML();main.append(about);
   const msg=box.querySelector('#shipMsg'),mm=box.querySelector('#shipMmsi');
   mm.addEventListener('input',()=>{mm.value=mm.value.replace(/\D/g,'').slice(0,9);});
   box.querySelector('#shipBuilt').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4);});
